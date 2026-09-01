@@ -65,6 +65,68 @@ app.get('/familias/:id/usuarios', (req, res) => {
     res.json(usuarios);
 });
 
+app.post('/tareas', (req, res) => {
+  const { familia_id, nombre, puntos_valor, tipo } = req.body;
+
+  if (!familia_id || !nombre || puntos_valor === undefined || !tipo) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios' });
+  }
+
+  if (tipo !== 'positiva' && tipo !== 'negativa') {
+    return res.status(400).json({ error: 'El tipo debe ser "positiva" o "negativa"' });
+  }
+
+  const stmt = db.prepare('INSERT INTO tareas (familia_id, nombre, puntos_valor, tipo) VALUES (?, ?, ?, ?)');
+  const resultado = stmt.run(familia_id, nombre, puntos_valor, tipo);
+
+  res.status(201).json({ id: resultado.lastInsertRowid, familia_id, nombre, puntos_valor, tipo });
+});
+
+app.get('/familias/:id/tareas', (req, res) => {
+  const { id } = req.params;
+  const tareas = db.prepare('SELECT * FROM tareas WHERE familia_id = ?').all(id);
+  res.json(tareas);
+});
+
+app.post('/eventos', (req, res) => {
+  const { usuario_id, tarea_id } = req.body;
+
+  if (!usuario_id || !tarea_id) {
+    return res.status(400).json({ error: 'usuario_id y tarea_id son obligatorios' });
+  }
+
+  const tarea = db.prepare('SELECT * FROM tareas WHERE id = ?').get(tarea_id);
+  if (!tarea) {
+    return res.status(404).json({ error: 'Tarea no encontrada' });
+  }
+
+  const usuario = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(usuario_id);
+  if (!usuario) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  const insertarEvento = db.prepare(
+    'INSERT INTO eventos (usuario_id, tarea_id, puntos_aplicados) VALUES (?, ?, ?)'
+  );
+  const resultado = insertarEvento.run(usuario_id, tarea_id, tarea.puntos_valor);
+
+  db.prepare('UPDATE usuarios SET puntos_totales = puntos_totales + ? WHERE id = ?')
+    .run(tarea.puntos_valor, usuario_id);
+
+  res.status(201).json({
+    id: resultado.lastInsertRowid,
+    mensaje: `${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos aplicados a ${usuario.nombre}`
+  });
+});
+
+app.get('/familias/:id/ranking', (req, res) => {
+  const { id } = req.params;
+  const ranking = db.prepare(
+    'SELECT nombre, puntos_totales FROM usuarios WHERE familia_id = ? ORDER BY puntos_totales DESC'
+  ).all(id);
+  res.json(ranking);
+});
+
 app.listen(PUERTO, () => {
     console.log(`Servidor escuchando en http://localhost:${PUERTO}`);
 });

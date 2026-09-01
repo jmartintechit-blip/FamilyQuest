@@ -22,4 +22,27 @@ db.exec(`
   )
 `);
 
+db.exec(`
+    CREATE TABLE IF NOT EXISTS tareas (
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       familia_id INTEGER NOT NULL,
+       nombre TEXT NOT NULL,
+       puntos_valor INTEGER NOT NULL,
+       tipo TEXT NOT NULL CHECK (tipo IN ('positiva', 'negativa')),
+       FOREIGN KEY (familia_id) REFERENCES familias(id)
+    )
+`);
+
+db.exec(`
+    CREATE TABLE IF NOT EXISTS eventos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER NOT NULL,
+        tarea_id INTEGER NOT NULL,
+        puntos_aplicados INTEGER NOT NULL,
+        fecha_hora TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+        FOREIGN KEY (tarea_id) REFERENCES tareas(id)
+    )
+`);
+
 module.exports = db;

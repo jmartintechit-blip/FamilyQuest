@@ -45,4 +45,10 @@ db.exec(`
     )
 `);
 
+try {
+  db.exec(`ALTER TABLE familias ADD COLUMN salud_mascota INTEGER DEFAULT 100`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
 module.exports = db;

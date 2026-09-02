@@ -127,6 +127,17 @@ app.get('/familias/:id/ranking', (req, res) => {
   res.json(ranking);
 });
 
+app.get('/familias/:id', (req, res) => {
+  const { id } = req.params;
+  const familia = db.prepare('SELECT * FROM familias WHERE id = ?').get(id);
+
+  if (!familia) {
+    return res.status(404).json({ error: 'Familia no encontrada' });
+  }
+
+  res.json(familia);
+});
+
 app.listen(PUERTO, () => {
     console.log(`Servidor escuchando en http://localhost:${PUERTO}`);
 });

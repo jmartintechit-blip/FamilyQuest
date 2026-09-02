@@ -108,10 +108,19 @@ app.post('/eventos', (req, res) => {
   const insertarEvento = db.prepare(
     'INSERT INTO eventos (usuario_id, tarea_id, puntos_aplicados) VALUES (?, ?, ?)'
   );
+  
   const resultado = insertarEvento.run(usuario_id, tarea_id, tarea.puntos_valor);
 
   db.prepare('UPDATE usuarios SET puntos_totales = puntos_totales + ? WHERE id = ?')
     .run(tarea.puntos_valor, usuario_id);
+
+  const cambioSalud = tarea.tipo === 'positiva' ? 3 : -5;
+
+  db.prepare(`
+    UPDATE familias 
+    SET salud_mascota = MAX(0, MIN(100, salud_mascota + ?)) 
+    WHERE id = (SELECT familia_id FROM usuarios WHERE id = ?)
+  `).run(cambioSalud, usuario_id);
 
   res.status(201).json({
     id: resultado.lastInsertRowid,

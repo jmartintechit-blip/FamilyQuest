@@ -147,6 +147,47 @@ app.get('/familias/:id', (req, res) => {
   res.json(familia);
 });
 
+app.post('/mensajes', (req, res) => {
+  const { familia_id, usuario_id, texto } = req.body;
+
+  if (!familia_id || !usuario_id || !texto) {
+    return res.status(400).json({ error: 'familia_id, usuario_id y texto son obligatorios' });
+  }
+
+  const stmt = db.prepare('INSERT INTO mensajes (familia_id, usuario_id, texto) VALUES (?, ?, ?)');
+  const resultado = stmt.run(familia_id, usuario_id, texto);
+
+  res.status(201).json({ id: resultado.lastInsertRowid, familia_id, usuario_id, texto });
+});
+
+app.get('/familias/:id/mensajes', (req, res) => {
+  const { id } = req.params;
+  const mensajes = db.prepare(`
+    SELECT mensajes.id, mensajes.texto, mensajes.fecha_hora, usuarios.nombre AS autor
+    FROM mensajes
+    JOIN usuarios ON mensajes.usuario_id = usuarios.id
+    WHERE mensajes.familia_id = ?
+    ORDER BY mensajes.fecha_hora ASC
+  `).all(id);
+
+  res.json(mensajes);
+});
+
+app.get('/usuarios/:id/notificaciones', (req, res) => {
+  const { id } = req.params;
+  const notificaciones = db.prepare(
+    'SELECT * FROM notificaciones WHERE usuario_id = ? ORDER BY fecha_hora DESC'
+  ).all(id);
+
+  res.json(notificaciones);
+});
+
+app.put('/notificaciones/:id/leida', (req, res) => {
+  const { id } = req.params;
+  db.prepare('UPDATE notificaciones SET leida = 1 WHERE id = ?').run(id);
+  res.json({ mensaje: 'Notificación marcada como leída' });
+});
+
 app.listen(PUERTO, () => {
     console.log(`Servidor escuchando en http://localhost:${PUERTO}`);
 });

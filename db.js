@@ -45,6 +45,29 @@ db.exec(`
     )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mensajes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    familia_id INTEGER NOT NULL,
+    usuario_id INTEGER NOT NULL,
+    texto TEXT NOT NULL,
+    fecha_hora TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (familia_id) REFERENCES familias(id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notificaciones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    contenido TEXT NOT NULL,
+    leida INTEGER DEFAULT 0,
+    fecha_hora TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+  )
+`);
+
 try {
   db.exec(`ALTER TABLE familias ADD COLUMN salud_mascota INTEGER DEFAULT 100`);
 } catch (error) {

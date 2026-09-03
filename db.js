@@ -74,4 +74,10 @@ try {
   // La columna ya existe, no pasa nada
 }
 
+try {
+  db.exec(`ALTER TABLE usuarios ADD COLUMN password_hash TEXT`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
 module.exports = db;

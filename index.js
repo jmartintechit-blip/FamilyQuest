@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const db = require('./db');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const servidor = http.createServer(app);
@@ -219,6 +220,51 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Alguien se ha desconectado:', socket.id);
+  });
+});
+
+app.post('/registro', async (req, res) => {
+  const { nombre, email, password } = req.body;
+
+  if (!nombre || !email || !password) {
+    return res.status(400).json({ error: 'Nombre, email y contraseña son obligatorios' });
+  }
+
+  const existente = db.prepare('SELECT id FROM usuarios WHERE email = ?').get(email);
+  if (existente) {
+    return res.status(409).json({ error: 'Ya existe un usuario con ese email' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const stmt = db.prepare('INSERT INTO usuarios (nombre, email, password_hash) VALUES (?, ?, ?)');
+  const resultado = stmt.run(nombre, email, passwordHash);
+
+  res.status(201).json({ id: resultado.lastInsertRowid, nombre, email });
+});
+
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email y contraseña son obligatorios' });
+  }
+
+  const usuario = db.prepare('SELECT * FROM usuarios WHERE email = ?').get(email);
+  if (!usuario) {
+    return res.status(401).json({ error: 'Email o contraseña incorrectos' });
+  }
+
+  const coincide = await bcrypt.compare(password, usuario.password_hash);
+  if (!coincide) {
+    return res.status(401).json({ error: 'Email o contraseña incorrectos' });
+  }
+
+  res.json({
+    id: usuario.id,
+    nombre: usuario.nombre,
+    email: usuario.email,
+    mensaje: 'Login correcto'
   });
 });
 

@@ -1,8 +1,28 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const db = require('./db');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+function verificarToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Token no proporcionado' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const datos = jwt.verify(token, process.env.JWT_SECRET);
+    req.usuario = datos;
+    next();
+  } catch (error) {
+    return res.status(403).json({ error: 'Token inválido o expirado' });
+  }
+}
 
 const app = express();
 const servidor = http.createServer(app);
@@ -97,7 +117,7 @@ app.get('/familias/:id/tareas', (req, res) => {
   res.json(tareas);
 });
 
-app.post('/eventos', (req, res) => {
+app.post('/eventos', verificarToken, (req, res) => {
   const { usuario_id, tarea_id } = req.body;
 
   if (!usuario_id || !tarea_id) {
@@ -260,11 +280,17 @@ app.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Email o contraseña incorrectos' });
   }
 
+  const token = jwt.sign(
+    { id: usuario.id, email: usuario.email },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
   res.json({
     id: usuario.id,
     nombre: usuario.nombre,
     email: usuario.email,
-    mensaje: 'Login correcto'
+    token
   });
 });
 

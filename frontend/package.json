@@ -1,0 +1,20 @@
+{
+  "name": "frontend",
+  "main": "node_modules/expo/AppEntry.js",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "expo": "^57.0.19",
+    "expo-status-bar": "^57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  }
+}

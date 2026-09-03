@@ -1,11 +1,53 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, Text, View, TextInput, Button, Alert } from 'react-native';
 
 export default function App() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  async function iniciarSesion() {
+    try {
+      const respuesta = await fetch('http://192.168.1.217:3000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      Alert.alert('¡Bienvenido!', `Hola ${datos.nombre}, login correcto`);
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
+      console.log(error);
+    }
+  }
+
   return (
     <View style={styles.container}>
-      <Text>¡Hola Juan! Tu app está funcionando 🎉</Text>
-      <StatusBar style="auto" />
+      <Text style={styles.titulo}>App Familia</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Contraseña"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
+
+      <Button title="Iniciar sesión" onPress={iniciarSesion} />
     </View>
   );
 }
@@ -16,5 +58,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 20,
+  },
+  titulo: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 30,
+  },
+  input: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
   },
 });

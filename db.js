@@ -80,4 +80,10 @@ try {
   // La columna ya existe, no pasa nada
 }
 
+try {
+  db.exec(`ALTER TABLE eventos ADD COLUMN registrado_por INTEGER`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
 module.exports = db;

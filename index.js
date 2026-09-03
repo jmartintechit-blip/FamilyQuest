@@ -60,7 +60,7 @@ app.get('/usuarios', (req, res) => {
 function generarCodigo() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
-app.post('/familias', (req, res) => {
+app.post('/familias', verificarToken, (req, res) => {
     const { nombre } = req.body;
 
     if (!nombre) {
@@ -74,7 +74,7 @@ app.post('/familias', (req, res) => {
     res.status(201).json({ id: resultado.lastInsertRowid, nombre, codigo_invitacion: codigo });
 });
 
-app.post('/familias/unirse', (req, res) => {
+app.post('/familias/unirse', verificarToken, (req, res) => {
     const { usuario_id, codigo_invitacion } = req.body;
 
     const familia = db.prepare('SELECT * FROM familias WHERE codigo_invitacion = ?').get(codigo_invitacion);
@@ -94,7 +94,7 @@ app.get('/familias/:id/usuarios', (req, res) => {
     res.json(usuarios);
 });
 
-app.post('/tareas', (req, res) => {
+app.post('/tareas', verificarToken, (req, res) => {
   const { familia_id, nombre, puntos_valor, tipo } = req.body;
 
   if (!familia_id || !nombre || puntos_valor === undefined || !tipo) {
@@ -135,10 +135,9 @@ app.post('/eventos', verificarToken, (req, res) => {
   }
 
   const insertarEvento = db.prepare(
-    'INSERT INTO eventos (usuario_id, tarea_id, puntos_aplicados) VALUES (?, ?, ?)'
+    'INSERT INTO eventos (usuario_id, tarea_id, puntos_aplicados, registrado_por) VALUES (?, ?, ?, ?)'
   );
-  
-  const resultado = insertarEvento.run(usuario_id, tarea_id, tarea.puntos_valor);
+  const resultado = insertarEvento.run(usuario_id, tarea_id, tarea.puntos_valor, req.usuario.id);
 
   db.prepare('UPDATE usuarios SET puntos_totales = puntos_totales + ? WHERE id = ?')
     .run(tarea.puntos_valor, usuario_id);
@@ -176,7 +175,7 @@ app.get('/familias/:id', (req, res) => {
   res.json(familia);
 });
 
-app.post('/mensajes', (req, res) => {
+app.post('/mensajes', verificarToken, (req, res) => {
   const { familia_id, usuario_id, texto } = req.body;
 
   if (!familia_id || !usuario_id || !texto) {

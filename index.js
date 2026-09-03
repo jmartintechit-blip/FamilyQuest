@@ -1,10 +1,18 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const db = require('./db');
 
 const app = express();
+const servidor = http.createServer(app);
+const io = new Server(servidor, {
+  cors: { origin: '*' }
+});
+
 const PUERTO = 3000;
 
-app.use(express.json());
+app.use(express.json()); 
+app.use(express.static('public'));
 
 app.get('/', (req, res) => {
     res.send('Hola Juan! Tu servidor está funcionando');
@@ -157,7 +165,20 @@ app.post('/mensajes', (req, res) => {
   const stmt = db.prepare('INSERT INTO mensajes (familia_id, usuario_id, texto) VALUES (?, ?, ?)');
   const resultado = stmt.run(familia_id, usuario_id, texto);
 
-  res.status(201).json({ id: resultado.lastInsertRowid, familia_id, usuario_id, texto });
+  const usuario = db.prepare('SELECT nombre FROM usuarios WHERE id = ?').get(usuario_id);
+
+  const mensajeCompleto = {
+    id: resultado.lastInsertRowid,
+    familia_id,
+    usuario_id,
+    texto,
+    autor: usuario.nombre,
+    fecha_hora: new Date().toISOString()
+  };
+
+  io.to(`familia_${familia_id}`).emit('mensaje_nuevo', mensajeCompleto);
+
+  res.status(201).json(mensajeCompleto);
 });
 
 app.get('/familias/:id/mensajes', (req, res) => {
@@ -188,6 +209,19 @@ app.put('/notificaciones/:id/leida', (req, res) => {
   res.json({ mensaje: 'Notificación marcada como leída' });
 });
 
-app.listen(PUERTO, () => {
-    console.log(`Servidor escuchando en http://localhost:${PUERTO}`);
+io.on('connection', (socket) => {
+  console.log('Alguien se ha conectado:', socket.id);
+
+  socket.on('unirse_familia', (familia_id) => {
+    socket.join(`familia_${familia_id}`);
+    console.log(`Socket ${socket.id} se unió a familia_${familia_id}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Alguien se ha desconectado:', socket.id);
+  });
+});
+
+servidor.listen(PUERTO, () => {
+  console.log(`Servidor escuchando en http://localhost:${PUERTO}`);
 });

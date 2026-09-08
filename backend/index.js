@@ -289,6 +289,7 @@ app.post('/login', async (req, res) => {
     id: usuario.id,
     nombre: usuario.nombre,
     email: usuario.email,
+    familia_id: usuario.familia_id,
     token
   });
 });

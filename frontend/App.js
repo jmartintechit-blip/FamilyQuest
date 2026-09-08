@@ -8,6 +8,9 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [usuario, setUsuario] = useState(null);
   const [token, setToken] = useState(null);
+  const [nombreFamilia, setNombreFamilia] = useState('');
+  const [codigoInvitacion, setCodigoInvitacion] = useState('');
+  const [saltarFamilia, setSaltarFamilia] = useState(false);
 
   const URL_BASE = 'http://192.168.1.217:3000';
 
@@ -30,7 +33,6 @@ export default function App() {
       setToken(datos.token);
     } catch (error) {
       Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
-      console.log(error);
     }
   }
 
@@ -62,7 +64,68 @@ export default function App() {
       setPassword('');
     } catch (error) {
       Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
-      console.log(error);
+    }
+  }
+
+  async function crearFamilia() {
+    if (!nombreFamilia) {
+      Alert.alert('Falta el nombre', 'Escribe un nombre para tu familia');
+      return;
+    }
+
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ nombre: nombreFamilia }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      await unirseConCodigo(datos.codigo_invitacion, datos.id);
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
+    }
+  }
+
+  async function unirseAFamilia() {
+    if (!codigoInvitacion) {
+      Alert.alert('Falta el código', 'Escribe el código de invitación');
+      return;
+    }
+    await unirseConCodigo(codigoInvitacion);
+  }
+
+  async function unirseConCodigo(codigo, familiaIdRecienCreada) {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias/unirse`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ usuario_id: usuario.id, codigo_invitacion: codigo }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      setUsuario({ ...usuario, familia_id: familiaIdRecienCreada || true });
+      Alert.alert('¡Listo!', datos.mensaje);
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
     }
   }
 
@@ -74,14 +137,44 @@ export default function App() {
     setNombre('');
   }
 
-  if (usuario) {
+  if (usuario && (usuario.familia_id || saltarFamilia)) {
     return (
       <View style={styles.container}>
         <Text style={styles.titulo}>¡Hola, {usuario.nombre}!</Text>
-        <Text>Has iniciado sesión correctamente.</Text>
-        <View style={{ marginTop: 20 }}>
+        <Text>{usuario.familia_id ? 'Ya perteneces a una familia.' : 'Estás explorando sin familia por ahora.'}</Text>        <View style={{ marginTop: 20 }}>
           <Button title="Cerrar sesión" onPress={cerrarSesion} />
         </View>
+      </View>
+    );
+  }
+
+  if (usuario && !usuario.familia_id) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.titulo}>Casi listo, {usuario.nombre}</Text>
+        <Text style={{ marginBottom: 20 }}>Crea una familia nueva o únete con un código</Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Nombre de tu familia"
+          value={nombreFamilia}
+          onChangeText={setNombreFamilia}
+        />
+        <Button title="Crear familia" onPress={crearFamilia} />
+
+        <Text style={{ marginVertical: 15 }}>— o —</Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Código de invitación"
+          value={codigoInvitacion}
+          onChangeText={setCodigoInvitacion}
+          autoCapitalize="characters"
+        />
+        <Button title="Unirme a familia" onPress={unirseAFamilia} />
+        <TouchableOpacity onPress={() => setSaltarFamilia(true)} style={{ marginTop: 20 }}>
+          <Text style={styles.enlace}>Saltar por ahora</Text>
+        </TouchableOpacity>
       </View>
     );
   }

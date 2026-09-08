@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, Button, Alert, TouchableOpacity } from 'react-native';
 
 export default function App() {
@@ -11,8 +11,62 @@ export default function App() {
   const [nombreFamilia, setNombreFamilia] = useState('');
   const [codigoInvitacion, setCodigoInvitacion] = useState('');
   const [saltarFamilia, setSaltarFamilia] = useState(false);
+  const [tareas, setTareas] = useState([]);
+  const [ranking, setRanking] = useState([]);
 
   const URL_BASE = 'http://192.168.1.217:3000';
+
+    async function cargarTareas() {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/tareas`);
+      const datos = await respuesta.json();
+      setTareas(datos);
+    } catch (error) {
+      console.log('Error cargando tareas', error);
+    }
+  }
+
+  async function cargarRanking() {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/ranking`);
+      const datos = await respuesta.json();
+      setRanking(datos);
+    } catch (error) {
+      console.log('Error cargando ranking', error);
+    }
+  }
+
+  async function marcarTareaHecha(tareaId) {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/eventos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ usuario_id: usuario.id, tarea_id: tareaId }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      Alert.alert('¡Hecho!', datos.mensaje);
+      cargarRanking();
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
+    }
+  }
+
+  useEffect(() => {
+    if (usuario && usuario.familia_id && typeof usuario.familia_id === 'number') {
+      cargarTareas();
+      cargarRanking();
+    }
+  }, [usuario]);
 
   async function iniciarSesion() {
     try {
@@ -122,8 +176,7 @@ export default function App() {
         return;
       }
 
-      setUsuario({ ...usuario, familia_id: familiaIdRecienCreada || true });
-      Alert.alert('¡Listo!', datos.mensaje);
+      setUsuario({ ...usuario, familia_id: datos.familia_id });      Alert.alert('¡Listo!', datos.mensaje);
     } catch (error) {
       Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
     }
@@ -138,10 +191,38 @@ export default function App() {
   }
 
   if (usuario && (usuario.familia_id || saltarFamilia)) {
+    if (!usuario.familia_id) {
+      return (
+        <View style={styles.container}>
+          <Text style={styles.titulo}>¡Hola, {usuario.nombre}!</Text>
+          <Text style={{ marginBottom: 20 }}>
+            Aún no tienes familia. Únete a una para ver tareas y puntos.
+          </Text>
+          <Button title="Cerrar sesión" onPress={cerrarSesion} />
+        </View>
+      );
+    }
+
     return (
-      <View style={styles.container}>
+      <View style={styles.containerLista}>
         <Text style={styles.titulo}>¡Hola, {usuario.nombre}!</Text>
-        <Text>{usuario.familia_id ? 'Ya perteneces a una familia.' : 'Estás explorando sin familia por ahora.'}</Text>        <View style={{ marginTop: 20 }}>
+
+        <Text style={styles.seccion}>Tus tareas</Text>
+        {tareas.map((tarea) => (
+          <View key={tarea.id} style={styles.filaTarea}>
+            <Text>{tarea.nombre} ({tarea.puntos_valor > 0 ? '+' : ''}{tarea.puntos_valor})</Text>
+            <TouchableOpacity onPress={() => marcarTareaHecha(tarea.id)}>
+              <Text style={styles.enlace}>Marcar hecha</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        <Text style={styles.seccion}>Ranking</Text>
+        {ranking.map((persona, indice) => (
+          <Text key={indice}>{persona.nombre}: {persona.puntos_totales} puntos</Text>
+        ))}
+
+        <View style={{ marginTop: 20 }}>
           <Button title="Cerrar sesión" onPress={cerrarSesion} />
         </View>
       </View>
@@ -224,6 +305,25 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+    containerLista: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 20,
+    paddingTop: 60,
+  },
+  seccion: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  filaTarea: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',

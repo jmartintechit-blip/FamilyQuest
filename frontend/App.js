@@ -4,6 +4,8 @@ import { StyleSheet, Text, View, TextInput, Button, Alert } from 'react-native';
 export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [usuario, setUsuario] = useState(null);
+  const [token, setToken] = useState(null);
 
   async function iniciarSesion() {
     try {
@@ -20,11 +22,31 @@ export default function App() {
         return;
       }
 
-      Alert.alert('¡Bienvenido!', `Hola ${datos.nombre}, login correcto`);
+      setUsuario(datos);
+      setToken(datos.token);
     } catch (error) {
       Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
       console.log(error);
     }
+  }
+
+  function cerrarSesion() {
+    setUsuario(null);
+    setToken(null);
+    setEmail('');
+    setPassword('');
+  }
+
+  if (usuario) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.titulo}>¡Hola, {usuario.nombre}!</Text>
+        <Text>Has iniciado sesión correctamente.</Text>
+        <View style={{ marginTop: 20 }}>
+          <Button title="Cerrar sesión" onPress={cerrarSesion} />
+        </View>
+      </View>
+    );
   }
 
   return (

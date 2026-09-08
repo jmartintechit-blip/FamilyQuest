@@ -85,7 +85,10 @@ app.post('/familias/unirse', verificarToken, (req, res) => {
 
     db.prepare('UPDATE usuarios SET familia_id = ? WHERE id = ?').run(familia.id, usuario_id);
 
-    res.json({ mensaje: `Usuario unido a la familia "${familia.nombre}" correctamente` });
+    res.json({
+        mensaje: `Usuario unido a la familia "${familia.nombre}" correctamente`,
+        familia_id: familia.id
+    });
 });
 
 app.get('/familias/:id/usuarios', (req, res) => {

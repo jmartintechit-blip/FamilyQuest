@@ -1,13 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { io } from 'socket.io-client';
+import * as SplashScreen from 'expo-splash-screen';
+import {
+  useFonts,
+  Nunito_400Regular,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from '@expo-google-fonts/nunito';
 import { colores, tipografia, espaciado, radios } from './theme';
 import BotonPrincipal from './components/BotonPrincipal';
 import CampoTexto from './components/CampoTexto';
 import Tarjeta from './components/Tarjeta';
-import TarjetaMascota from './components/TarjetaMascota';
+import MascotaHero from './components/mascota/MascotaHero';
+import BannerEvento from './components/BannerEvento';
+import TareaItem from './components/TareaItem';
+import RankingLista from './components/RankingLista';
+import BurbujaChat from './components/BurbujaChat';
+
+SplashScreen.preventAutoHideAsync();
+
+// Eventos de ejemplo para el "modo caos". El backend todavía no genera estos
+// eventos por su cuenta: esto es solo para poder mostrar y probar la parte
+// visual (el banner) hasta que exista esa lógica en el servidor.
+const EVENTOS_DEMO = [
+  { tipo: 'hora_dorada', mensaje: '✨ Hora dorada: los puntos valen el doble durante 2 horas' },
+  { tipo: 'reto_familiar', mensaje: '🎯 Reto familiar: completad 3 tareas hoy y ganáis un bonus' },
+];
 
 export default function App() {
+  const [fontsCargadas] = useFonts({
+    Nunito_400Regular,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+  });
+
   const [modoRegistro, setModoRegistro] = useState(false);
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -24,8 +53,16 @@ export default function App() {
   const [socket, setSocket] = useState(null);
   const [mostrarChat, setMostrarChat] = useState(false);
   const [saludMascota, setSaludMascota] = useState(100);
+  const [puntosFlotantes, setPuntosFlotantes] = useState([]);
+  const [eventoActivo, setEventoActivo] = useState(null);
 
   const URL_BASE = 'http://192.168.1.217:3000';
+
+  const alTerminarLayout = useCallback(async () => {
+    if (fontsCargadas) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsCargadas]);
 
   useEffect(() => {
     if (usuario && typeof usuario.familia_id === 'number') {
@@ -108,7 +145,20 @@ export default function App() {
     }
   }
 
+  function mostrarPuntoFlotante(tarea) {
+    const id = Date.now();
+    const texto = `${tarea.puntos_valor > 0 ? '+' : ''}${tarea.puntos_valor} puntos`;
+    const color = tarea.puntos_valor > 0 ? colores.primarioOscuro : colores.error;
+
+    setPuntosFlotantes((actuales) => [...actuales, { id, texto, color }]);
+    setTimeout(() => {
+      setPuntosFlotantes((actuales) => actuales.filter((p) => p.id !== id));
+    }, 1300);
+  }
+
   async function marcarTareaHecha(tareaId) {
+    const tarea = tareas.find((t) => t.id === tareaId);
+
     try {
       const respuesta = await fetch(`${URL_BASE}/eventos`, {
         method: 'POST',
@@ -126,12 +176,20 @@ export default function App() {
         return;
       }
 
-      Alert.alert('¡Hecho!', datos.mensaje);
+      if (tarea) mostrarPuntoFlotante(tarea);
       cargarRanking();
       cargarFamilia();
     } catch (error) {
       Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
     }
+  }
+
+  // Demo del "modo caos": activa un evento de ejemplo unos segundos.
+  // Sustituir por la lógica real en cuanto el backend genere estos eventos.
+  function simularEventoEspecial() {
+    const evento = EVENTOS_DEMO[Math.floor(Math.random() * EVENTOS_DEMO.length)];
+    setEventoActivo(evento);
+    setTimeout(() => setEventoActivo(null), 8000);
   }
 
   useEffect(() => {
@@ -265,10 +323,14 @@ export default function App() {
     setNombre('');
   }
 
+  if (!fontsCargadas) {
+    return null;
+  }
+
   if (usuario && (usuario.familia_id || saltarFamilia)) {
     if (!usuario.familia_id) {
       return (
-        <View style={styles.container}>
+        <View style={styles.container} onLayout={alTerminarLayout}>
           <Text style={tipografia.tituloGrande}>¡Hola, {usuario.nombre}!</Text>
           <Text style={[tipografia.cuerpoSuave, { marginTop: espaciado.sm, marginBottom: espaciado.lg, textAlign: 'center' }]}>
             Aún no tienes familia. Únete a una para ver tareas y puntos.
@@ -279,30 +341,27 @@ export default function App() {
     }
 
     return (
-      <ScrollView style={styles.containerLista} contentContainerStyle={{ padding: espaciado.md, paddingTop: 60 }}>
-        <Text style={[tipografia.tituloGrande, { marginBottom: espaciado.md }]}>¡Hola, {usuario.nombre}!</Text>
+      <ScrollView
+        style={styles.containerLista}
+        contentContainerStyle={{ padding: espaciado.md, paddingTop: 60 }}
+        onLayout={alTerminarLayout}
+      >
+        <Text style={[tipografia.tituloGrande, { marginBottom: espaciado.sm }]}>¡Hola, {usuario.nombre}!</Text>
 
-        <TarjetaMascota salud={saludMascota} />
+        <BannerEvento evento={eventoActivo} />
+
+        <MascotaHero salud={saludMascota} puntosFlotantes={puntosFlotantes} />
 
         <Tarjeta>
           <Text style={styles.seccion}>Tus tareas</Text>
           {tareas.map((tarea) => (
-            <View key={tarea.id} style={styles.filaTarea}>
-              <Text style={tipografia.cuerpo}>{tarea.nombre} ({tarea.puntos_valor > 0 ? '+' : ''}{tarea.puntos_valor})</Text>
-              <TouchableOpacity onPress={() => marcarTareaHecha(tarea.id)}>
-                <Text style={styles.enlace}>Marcar hecha</Text>
-              </TouchableOpacity>
-            </View>
+            <TareaItem key={tarea.id} tarea={tarea} onMarcar={marcarTareaHecha} />
           ))}
         </Tarjeta>
 
         <Tarjeta>
           <Text style={styles.seccion}>Ranking</Text>
-          {ranking.map((persona, indice) => (
-            <Text key={indice} style={[tipografia.cuerpo, { marginBottom: espaciado.xs }]}>
-              {persona.nombre}: {persona.puntos_totales} puntos
-            </Text>
-          ))}
+          <RankingLista ranking={ranking} />
         </Tarjeta>
 
         <Tarjeta>
@@ -314,10 +373,11 @@ export default function App() {
             <View>
               <View style={styles.cajaChat}>
                 {mensajes.map((mensaje) => (
-                  <Text key={mensaje.id} style={[tipografia.cuerpo, { marginBottom: espaciado.xs }]}>
-                    <Text style={{ fontWeight: '700' }}>{mensaje.autor}: </Text>
-                    {mensaje.texto}
-                  </Text>
+                  <BurbujaChat
+                    key={mensaje.id}
+                    mensaje={mensaje}
+                    esPropio={mensaje.usuario_id === usuario.id}
+                  />
                 ))}
               </View>
 
@@ -330,12 +390,16 @@ export default function App() {
                   />
                 </View>
                 <TouchableOpacity onPress={enviarMensaje} style={styles.botonEnviar}>
-                  <Text style={{ color: colores.textoSobrePrimario, fontWeight: '700' }}>Enviar</Text>
+                  <Text style={styles.textoBotonEnviar}>Enviar</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
         </Tarjeta>
+
+        <TouchableOpacity onPress={simularEventoEspecial} style={{ marginBottom: espaciado.md }}>
+          <Text style={styles.enlaceDemo}>✨ Simular evento especial (demo)</Text>
+        </TouchableOpacity>
 
         <BotonPrincipal titulo="Cerrar sesión" variante="secundario" onPress={cerrarSesion} />
       </ScrollView>
@@ -344,7 +408,7 @@ export default function App() {
 
   if (usuario && !usuario.familia_id) {
     return (
-      <View style={styles.container}>
+      <View style={styles.container} onLayout={alTerminarLayout}>
         <Text style={tipografia.tituloGrande}>Casi listo, {usuario.nombre}</Text>
         <Text style={[tipografia.cuerpoSuave, { marginTop: espaciado.sm, marginBottom: espaciado.lg, textAlign: 'center' }]}>
           Crea una familia nueva o únete con un código
@@ -375,7 +439,7 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={alTerminarLayout}>
       <Text style={tipografia.tituloGrande}>App Familia</Text>
       <Text style={[tipografia.cuerpoSuave, { marginTop: espaciado.sm, marginBottom: espaciado.lg }]}>
         Tareas del hogar, en equipo 🌿
@@ -443,17 +507,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: espaciado.md,
     paddingVertical: espaciado.md,
   },
+  textoBotonEnviar: {
+    ...tipografia.cuerpo,
+    color: colores.textoSobrePrimario,
+  },
   seccion: {
     ...tipografia.subtitulo,
     marginBottom: espaciado.sm,
-  },
-  filaTarea: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: espaciado.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colores.borde,
   },
   container: {
     flex: 1,
@@ -465,6 +525,11 @@ const styles = StyleSheet.create({
   enlace: {
     ...tipografia.cuerpo,
     color: colores.primario,
-    fontWeight: '600',
+  },
+  enlaceDemo: {
+    ...tipografia.chico,
+    color: colores.doradoOscuro,
+    textAlign: 'center',
+    marginBottom: espaciado.sm,
   },
 });

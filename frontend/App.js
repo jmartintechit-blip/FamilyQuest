@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Button, Alert, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { io } from 'socket.io-client';
+import { colores, tipografia, espaciado, radios } from './theme';
+import BotonPrincipal from './components/BotonPrincipal';
+import CampoTexto from './components/CampoTexto';
+import Tarjeta from './components/Tarjeta';
+import TarjetaMascota from './components/TarjetaMascota';
 
 export default function App() {
   const [modoRegistro, setModoRegistro] = useState(false);
@@ -22,7 +27,7 @@ export default function App() {
 
   const URL_BASE = 'http://192.168.1.217:3000';
 
-    useEffect(() => {
+  useEffect(() => {
     if (usuario && typeof usuario.familia_id === 'number') {
       const nuevoSocket = io(URL_BASE);
       nuevoSocket.emit('unirse_familia', usuario.familia_id);
@@ -40,7 +45,7 @@ export default function App() {
     }
   }, [usuario]);
 
-    async function cargarTareas() {
+  async function cargarTareas() {
     try {
       const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/tareas`);
       const datos = await respuesta.json();
@@ -50,7 +55,7 @@ export default function App() {
     }
   }
 
-    async function cargarFamilia() {
+  async function cargarFamilia() {
     try {
       const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}`);
       const datos = await respuesta.json();
@@ -59,8 +64,8 @@ export default function App() {
       console.log('Error cargando familia', error);
     }
   }
-  
-    async function cargarMensajes() {
+
+  async function cargarMensajes() {
     try {
       const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/mensajes`);
       const datos = await respuesta.json();
@@ -91,13 +96,6 @@ export default function App() {
     } catch (error) {
       Alert.alert('Error de conexión', 'No se pudo enviar el mensaje');
     }
-  }
-
-    function estadoMascota() {
-    if (saludMascota >= 80) return { emoji: '🌻', mensaje: '¡Estoy genial, gracias por cuidarme!', color: '#FFF4D6' };
-    if (saludMascota >= 50) return { emoji: '🌿', mensaje: 'Voy tirando, ¿me ayudas un poco?', color: '#EAF4E1' };
-    if (saludMascota >= 20) return { emoji: '🥀', mensaje: 'Me vendría bien una ayudita...', color: '#FBE8E0' };
-    return { emoji: '🍂', mensaje: 'Necesito mucho cariño ahora mismo', color: '#F5E0DC' };
   }
 
   async function cargarRanking() {
@@ -252,7 +250,8 @@ export default function App() {
         return;
       }
 
-      setUsuario({ ...usuario, familia_id: datos.familia_id });      Alert.alert('¡Listo!', datos.mensaje);
+      setUsuario({ ...usuario, familia_id: datos.familia_id });
+      Alert.alert('¡Listo!', datos.mensaje);
     } catch (error) {
       Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
     }
@@ -270,93 +269,105 @@ export default function App() {
     if (!usuario.familia_id) {
       return (
         <View style={styles.container}>
-          <Text style={styles.titulo}>¡Hola, {usuario.nombre}!</Text>
-          <Text style={{ marginBottom: 20 }}>
+          <Text style={tipografia.tituloGrande}>¡Hola, {usuario.nombre}!</Text>
+          <Text style={[tipografia.cuerpoSuave, { marginTop: espaciado.sm, marginBottom: espaciado.lg, textAlign: 'center' }]}>
             Aún no tienes familia. Únete a una para ver tareas y puntos.
           </Text>
-          <Button title="Cerrar sesión" onPress={cerrarSesion} />
+          <BotonPrincipal titulo="Cerrar sesión" variante="secundario" onPress={cerrarSesion} />
         </View>
       );
     }
 
     return (
-      <View style={styles.containerLista}>
-        <Text style={styles.titulo}>¡Hola, {usuario.nombre}!</Text>
+      <ScrollView style={styles.containerLista} contentContainerStyle={{ padding: espaciado.md, paddingTop: 60 }}>
+        <Text style={[tipografia.tituloGrande, { marginBottom: espaciado.md }]}>¡Hola, {usuario.nombre}!</Text>
 
-        <Text style={styles.seccion}>Tus tareas</Text>
-        {tareas.map((tarea) => (
-          <View key={tarea.id} style={styles.filaTarea}>
-            <Text>{tarea.nombre} ({tarea.puntos_valor > 0 ? '+' : ''}{tarea.puntos_valor})</Text>
-            <TouchableOpacity onPress={() => marcarTareaHecha(tarea.id)}>
-              <Text style={styles.enlace}>Marcar hecha</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+        <TarjetaMascota salud={saludMascota} />
 
-        <Text style={styles.seccion}>Ranking</Text>
-        {ranking.map((persona, indice) => (
-          <Text key={indice}>{persona.nombre}: {persona.puntos_totales} puntos</Text>
-        ))}
-
-        <TouchableOpacity onPress={() => setMostrarChat(!mostrarChat)} style={{ marginTop: 20 }}>
-          <Text style={styles.seccion}>{mostrarChat ? 'Ocultar chat ▲' : 'Ver chat ▼'}</Text>
-        </TouchableOpacity>
-
-        {mostrarChat && (
-          <View>
-            <View style={styles.cajaChat}>
-              {mensajes.map((mensaje) => (
-                <Text key={mensaje.id} style={{ marginBottom: 5 }}>
-                  <Text style={{ fontWeight: 'bold' }}>{mensaje.autor}: </Text>
-                  {mensaje.texto}
-                </Text>
-              ))}
+        <Tarjeta>
+          <Text style={styles.seccion}>Tus tareas</Text>
+          {tareas.map((tarea) => (
+            <View key={tarea.id} style={styles.filaTarea}>
+              <Text style={tipografia.cuerpo}>{tarea.nombre} ({tarea.puntos_valor > 0 ? '+' : ''}{tarea.puntos_valor})</Text>
+              <TouchableOpacity onPress={() => marcarTareaHecha(tarea.id)}>
+                <Text style={styles.enlace}>Marcar hecha</Text>
+              </TouchableOpacity>
             </View>
+          ))}
+        </Tarjeta>
 
-            <View style={styles.filaInputChat}>
-              <TextInput
-                style={styles.inputChat}
-                placeholder="Escribe un mensaje..."
-                value={textoMensaje}
-                onChangeText={setTextoMensaje}
-              />
-              <Button title="Enviar" onPress={enviarMensaje} />
+        <Tarjeta>
+          <Text style={styles.seccion}>Ranking</Text>
+          {ranking.map((persona, indice) => (
+            <Text key={indice} style={[tipografia.cuerpo, { marginBottom: espaciado.xs }]}>
+              {persona.nombre}: {persona.puntos_totales} puntos
+            </Text>
+          ))}
+        </Tarjeta>
+
+        <Tarjeta>
+          <TouchableOpacity onPress={() => setMostrarChat(!mostrarChat)}>
+            <Text style={styles.seccion}>{mostrarChat ? 'Ocultar chat ▲' : 'Ver chat ▼'}</Text>
+          </TouchableOpacity>
+
+          {mostrarChat && (
+            <View>
+              <View style={styles.cajaChat}>
+                {mensajes.map((mensaje) => (
+                  <Text key={mensaje.id} style={[tipografia.cuerpo, { marginBottom: espaciado.xs }]}>
+                    <Text style={{ fontWeight: '700' }}>{mensaje.autor}: </Text>
+                    {mensaje.texto}
+                  </Text>
+                ))}
+              </View>
+
+              <View style={styles.filaInputChat}>
+                <View style={{ flex: 1 }}>
+                  <CampoTexto
+                    placeholder="Escribe un mensaje..."
+                    value={textoMensaje}
+                    onChangeText={setTextoMensaje}
+                  />
+                </View>
+                <TouchableOpacity onPress={enviarMensaje} style={styles.botonEnviar}>
+                  <Text style={{ color: colores.textoSobrePrimario, fontWeight: '700' }}>Enviar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        )}
+          )}
+        </Tarjeta>
 
-        <View style={{ marginTop: 20 }}>
-          <Button title="Cerrar sesión" onPress={cerrarSesion} />
-        </View>
-      </View>
+        <BotonPrincipal titulo="Cerrar sesión" variante="secundario" onPress={cerrarSesion} />
+      </ScrollView>
     );
   }
 
   if (usuario && !usuario.familia_id) {
     return (
       <View style={styles.container}>
-        <Text style={styles.titulo}>Casi listo, {usuario.nombre}</Text>
-        <Text style={{ marginBottom: 20 }}>Crea una familia nueva o únete con un código</Text>
+        <Text style={tipografia.tituloGrande}>Casi listo, {usuario.nombre}</Text>
+        <Text style={[tipografia.cuerpoSuave, { marginTop: espaciado.sm, marginBottom: espaciado.lg, textAlign: 'center' }]}>
+          Crea una familia nueva o únete con un código
+        </Text>
 
-        <TextInput
-          style={styles.input}
+        <CampoTexto
           placeholder="Nombre de tu familia"
           value={nombreFamilia}
           onChangeText={setNombreFamilia}
         />
-        <Button title="Crear familia" onPress={crearFamilia} />
+        <BotonPrincipal titulo="Crear familia" onPress={crearFamilia} />
 
-        <Text style={{ marginVertical: 15 }}>— o —</Text>
+        <Text style={[tipografia.cuerpoSuave, { marginVertical: espaciado.md }]}>— o —</Text>
 
-        <TextInput
-          style={styles.input}
+        <CampoTexto
           placeholder="Código de invitación"
           value={codigoInvitacion}
           onChangeText={setCodigoInvitacion}
           autoCapitalize="characters"
         />
-        <Button title="Unirme a familia" onPress={unirseAFamilia} />
-        <TouchableOpacity onPress={() => setSaltarFamilia(true)} style={{ marginTop: 20 }}>
+        <BotonPrincipal titulo="Unirme a familia" variante="secundario" onPress={unirseAFamilia} />
+
+        <TouchableOpacity onPress={() => setSaltarFamilia(true)} style={{ marginTop: espaciado.lg }}>
           <Text style={styles.enlace}>Saltar por ahora</Text>
         </TouchableOpacity>
       </View>
@@ -365,27 +376,27 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.titulo}>App Familia</Text>
+      <Text style={tipografia.tituloGrande}>App Familia</Text>
+      <Text style={[tipografia.cuerpoSuave, { marginTop: espaciado.sm, marginBottom: espaciado.lg }]}>
+        Tareas del hogar, en equipo 🌿
+      </Text>
 
       {modoRegistro && (
-        <TextInput
-          style={styles.input}
+        <CampoTexto
           placeholder="Nombre"
           value={nombre}
           onChangeText={setNombre}
         />
       )}
 
-      <TextInput
-        style={styles.input}
+      <CampoTexto
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
       />
 
-      <TextInput
-        style={styles.input}
+      <CampoTexto
         placeholder="Contraseña"
         value={password}
         onChangeText={setPassword}
@@ -393,12 +404,12 @@ export default function App() {
       />
 
       {modoRegistro ? (
-        <Button title="Crear cuenta" onPress={registrarse} />
+        <BotonPrincipal titulo="Crear cuenta" onPress={registrarse} />
       ) : (
-        <Button title="Iniciar sesión" onPress={iniciarSesion} />
+        <BotonPrincipal titulo="Iniciar sesión" onPress={iniciarSesion} />
       )}
 
-      <TouchableOpacity onPress={() => setModoRegistro(!modoRegistro)} style={{ marginTop: 15 }}>
+      <TouchableOpacity onPress={() => setModoRegistro(!modoRegistro)} style={{ marginTop: espaciado.md }}>
         <Text style={styles.enlace}>
           {modoRegistro ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
         </Text>
@@ -408,67 +419,52 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-    containerLista: {
+  containerLista: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-    paddingTop: 60,
+    backgroundColor: colores.fondo,
   },
-    cajaChat: {
+  cajaChat: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
+    borderColor: colores.borde,
+    borderRadius: radios.md,
+    padding: espaciado.sm,
     height: 150,
-    marginTop: 10,
+    marginTop: espaciado.sm,
   },
   filaInputChat: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-    gap: 10,
+    marginTop: espaciado.sm,
+    gap: espaciado.sm,
   },
-  inputChat: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
+  botonEnviar: {
+    backgroundColor: colores.primario,
+    borderRadius: radios.md,
+    paddingHorizontal: espaciado.md,
+    paddingVertical: espaciado.md,
   },
   seccion: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
+    ...tipografia.subtitulo,
+    marginBottom: espaciado.sm,
   },
   filaTarea: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    alignItems: 'center',
+    paddingVertical: espaciado.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colores.borde,
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colores.fondo,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
-  },
-  titulo: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 30,
-  },
-  input: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
+    padding: espaciado.lg,
   },
   enlace: {
-    color: '#007AFF',
+    ...tipografia.cuerpo,
+    color: colores.primario,
+    fontWeight: '600',
   },
 });

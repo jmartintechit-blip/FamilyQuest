@@ -18,6 +18,7 @@ export default function App() {
   const [textoMensaje, setTextoMensaje] = useState('');
   const [socket, setSocket] = useState(null);
   const [mostrarChat, setMostrarChat] = useState(false);
+  const [saludMascota, setSaludMascota] = useState(100);
 
   const URL_BASE = 'http://192.168.1.217:3000';
 
@@ -49,6 +50,16 @@ export default function App() {
     }
   }
 
+    async function cargarFamilia() {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}`);
+      const datos = await respuesta.json();
+      setSaludMascota(datos.salud_mascota);
+    } catch (error) {
+      console.log('Error cargando familia', error);
+    }
+  }
+  
     async function cargarMensajes() {
     try {
       const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/mensajes`);
@@ -82,6 +93,13 @@ export default function App() {
     }
   }
 
+    function estadoMascota() {
+    if (saludMascota >= 80) return { emoji: '🌻', mensaje: '¡Estoy genial, gracias por cuidarme!', color: '#FFF4D6' };
+    if (saludMascota >= 50) return { emoji: '🌿', mensaje: 'Voy tirando, ¿me ayudas un poco?', color: '#EAF4E1' };
+    if (saludMascota >= 20) return { emoji: '🥀', mensaje: 'Me vendría bien una ayudita...', color: '#FBE8E0' };
+    return { emoji: '🍂', mensaje: 'Necesito mucho cariño ahora mismo', color: '#F5E0DC' };
+  }
+
   async function cargarRanking() {
     try {
       const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/ranking`);
@@ -112,6 +130,7 @@ export default function App() {
 
       Alert.alert('¡Hecho!', datos.mensaje);
       cargarRanking();
+      cargarFamilia();
     } catch (error) {
       Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
     }
@@ -121,6 +140,7 @@ export default function App() {
     if (usuario && usuario.familia_id && typeof usuario.familia_id === 'number') {
       cargarTareas();
       cargarRanking();
+      cargarFamilia();
     }
   }, [usuario]);
 

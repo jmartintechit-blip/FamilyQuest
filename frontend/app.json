@@ -8,6 +8,10 @@
     "newArchEnabled": true,
     "splash": {
       "backgroundColor": "#ffffff"
-    }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-splash-screen"
+    ]
   }
 }

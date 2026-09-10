@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, Button, Alert, TouchableOpacity } from 'react-native';
+import { io } from 'socket.io-client';
 
 export default function App() {
   const [modoRegistro, setModoRegistro] = useState(false);
@@ -13,8 +14,30 @@ export default function App() {
   const [saltarFamilia, setSaltarFamilia] = useState(false);
   const [tareas, setTareas] = useState([]);
   const [ranking, setRanking] = useState([]);
+  const [mensajes, setMensajes] = useState([]);
+  const [textoMensaje, setTextoMensaje] = useState('');
+  const [socket, setSocket] = useState(null);
+  const [mostrarChat, setMostrarChat] = useState(false);
 
   const URL_BASE = 'http://192.168.1.217:3000';
+
+    useEffect(() => {
+    if (usuario && typeof usuario.familia_id === 'number') {
+      const nuevoSocket = io(URL_BASE);
+      nuevoSocket.emit('unirse_familia', usuario.familia_id);
+
+      nuevoSocket.on('mensaje_nuevo', (mensaje) => {
+        setMensajes((mensajesActuales) => [...mensajesActuales, mensaje]);
+      });
+
+      setSocket(nuevoSocket);
+      cargarMensajes();
+
+      return () => {
+        nuevoSocket.disconnect();
+      };
+    }
+  }, [usuario]);
 
     async function cargarTareas() {
     try {
@@ -23,6 +46,39 @@ export default function App() {
       setTareas(datos);
     } catch (error) {
       console.log('Error cargando tareas', error);
+    }
+  }
+
+    async function cargarMensajes() {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/mensajes`);
+      const datos = await respuesta.json();
+      setMensajes(datos);
+    } catch (error) {
+      console.log('Error cargando mensajes', error);
+    }
+  }
+
+  async function enviarMensaje() {
+    if (!textoMensaje.trim()) return;
+
+    try {
+      await fetch(`${URL_BASE}/mensajes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          familia_id: usuario.familia_id,
+          usuario_id: usuario.id,
+          texto: textoMensaje,
+        }),
+      });
+
+      setTextoMensaje('');
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo enviar el mensaje');
     }
   }
 
@@ -222,6 +278,33 @@ export default function App() {
           <Text key={indice}>{persona.nombre}: {persona.puntos_totales} puntos</Text>
         ))}
 
+        <TouchableOpacity onPress={() => setMostrarChat(!mostrarChat)} style={{ marginTop: 20 }}>
+          <Text style={styles.seccion}>{mostrarChat ? 'Ocultar chat ▲' : 'Ver chat ▼'}</Text>
+        </TouchableOpacity>
+
+        {mostrarChat && (
+          <View>
+            <View style={styles.cajaChat}>
+              {mensajes.map((mensaje) => (
+                <Text key={mensaje.id} style={{ marginBottom: 5 }}>
+                  <Text style={{ fontWeight: 'bold' }}>{mensaje.autor}: </Text>
+                  {mensaje.texto}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.filaInputChat}>
+              <TextInput
+                style={styles.inputChat}
+                placeholder="Escribe un mensaje..."
+                value={textoMensaje}
+                onChangeText={setTextoMensaje}
+              />
+              <Button title="Enviar" onPress={enviarMensaje} />
+            </View>
+          </View>
+        )}
+
         <View style={{ marginTop: 20 }}>
           <Button title="Cerrar sesión" onPress={cerrarSesion} />
         </View>
@@ -310,6 +393,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 20,
     paddingTop: 60,
+  },
+    cajaChat: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
+    height: 150,
+    marginTop: 10,
+  },
+  filaInputChat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 10,
+  },
+  inputChat: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
   },
   seccion: {
     fontSize: 18,

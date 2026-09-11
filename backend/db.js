@@ -86,4 +86,10 @@ try {
   // La columna ya existe, no pasa nada
 }
 
+try {
+  db.exec(`ALTER TABLE familias ADD COLUMN nombre_mascota TEXT DEFAULT 'Brote'`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
 module.exports = db;

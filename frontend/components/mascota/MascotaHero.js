@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Svg, { Path, Circle, Ellipse } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedProps,
@@ -14,10 +14,11 @@ import Animated, {
   FadeInUp,
   FadeOutUp,
 } from 'react-native-reanimated';
-import { colores, tipografia, espaciado, radios } from '../../theme';
+import { colores, tipografia, fuentes, espaciado, radios } from '../../theme';
 
-// react-native-svg no anima sus props por sí solo: envolvemos <Path> con
+// react-native-svg no anima sus props por sí solo: envolvemos las formas con
 // Reanimated para poder cambiar su "fill" o su "d" cuadro a cuadro.
+const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 function mensajePorSalud(salud) {
@@ -29,7 +30,9 @@ function mensajePorSalud(salud) {
 
 // puntosFlotantes: [{ id, texto, color }] — mensajes tipo "+5" que aparecen
 // un instante sobre la mascota cuando se marca una tarea, y luego desaparecen.
-export default function MascotaHero({ salud, puntosFlotantes = [] }) {
+// nombre / onPresionarNombre: el nombre que le puso la familia a la mascota,
+// tocable para poder cambiarlo.
+export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPresionarNombre }) {
   const saludAnimada = useSharedValue(salud);
   const respiracion = useSharedValue(0);
 
@@ -56,7 +59,7 @@ export default function MascotaHero({ salud, puntosFlotantes = [] }) {
   });
 
   const estiloGlow = useAnimatedStyle(() => {
-    const opacidad = interpolate(saludAnimada.value, [0, 50, 100], [0, 0.12, 0.55], Extrapolation.CLAMP);
+    const opacidad = interpolate(saludAnimada.value, [0, 50, 100], [0, 0.15, 0.6], Extrapolation.CLAMP);
     const escalaGlow = 1 + respiracion.value * 0.06;
     return { opacity: opacidad, transform: [{ scale: escalaGlow }] };
   });
@@ -65,10 +68,15 @@ export default function MascotaHero({ salud, puntosFlotantes = [] }) {
     fill: interpolateColor(saludAnimada.value, [0, 50, 100], colores.mascotaGradiente),
   }));
 
+  // Los mofletes solo se notan bien cuando está sano y contento.
+  const propsMofletes = useAnimatedProps(() => ({
+    opacity: interpolate(saludAnimada.value, [0, 40, 100], [0, 0.3, 0.85], Extrapolation.CLAMP),
+  }));
+
   // La boca pasa de una curva triste a una sonrisa moviendo su punto de control.
   const propsBoca = useAnimatedProps(() => {
-    const curvatura = interpolate(saludAnimada.value, [0, 100], [122, 152], Extrapolation.CLAMP);
-    return { d: `M75,133 Q100,${curvatura} 125,133` };
+    const curvatura = interpolate(saludAnimada.value, [0, 100], [118, 156], Extrapolation.CLAMP);
+    return { d: `M72,132 Q100,${curvatura} 128,132` };
   });
 
   const estiloBarra = useAnimatedStyle(() => ({
@@ -92,27 +100,43 @@ export default function MascotaHero({ salud, puntosFlotantes = [] }) {
       ))}
 
       <Animated.View style={estiloCuerpo}>
-        <Svg width={160} height={160} viewBox="0 0 200 200">
-          <Path d="M100,35 C90,10 60,5 50,20 C65,35 85,38 100,35 Z" fill={colores.primario} />
-          <Path d="M100,35 C110,10 140,5 150,20 C135,35 115,38 100,35 Z" fill={colores.primarioOscuro} />
+        <Svg width={180} height={180} viewBox="0 0 200 200">
+          {/* brote de hojas, más redondeado y con 3 hojitas */}
+          <Path d="M100,38 C93,15 68,8 56,18 C68,32 84,37 100,38 Z" fill={colores.primario} />
+          <Path d="M100,38 C107,15 132,8 144,18 C132,32 116,37 100,38 Z" fill={colores.primarioOscuro} />
+          <Path d="M100,34 C98,18 100,8 100,2 C102,8 104,18 100,34 Z" fill={colores.primarioOscuro} />
 
-          <AnimatedPath
-            animatedProps={propsCuerpo}
-            d="M100,40 C145,40 175,75 175,115 C175,155 142,180 100,180 C58,180 25,155 25,115 C25,75 55,40 100,40 Z"
-          />
+          {/* cuerpo: óvalo ancho y redondeado = más "gordito" que un blob alargado */}
+          <AnimatedEllipse animatedProps={propsCuerpo} cx="100" cy="115" rx="78" ry="68" />
 
-          <Circle cx="78" cy="105" r="7" fill={colores.texto} />
-          <Circle cx="122" cy="105" r="7" fill={colores.texto} />
+          {/* brillo superior para dar aspecto pulido/brillante, no plano */}
+          <Ellipse cx="72" cy="80" rx="28" ry="16" fill="#FFFFFF" opacity={0.28} transform="rotate(-25 72 80)" />
 
+          {/* mofletes sonrosados */}
+          <AnimatedEllipse animatedProps={propsMofletes} cx="58" cy="132" rx="14" ry="9" fill={colores.mascotaMofletes} />
+          <AnimatedEllipse animatedProps={propsMofletes} cx="142" cy="132" rx="14" ry="9" fill={colores.mascotaMofletes} />
+
+          {/* ojos grandes con brillo, para más ternura */}
+          <Circle cx="74" cy="104" r="11" fill={colores.texto} />
+          <Circle cx="126" cy="104" r="11" fill={colores.texto} />
+          <Circle cx="70.5" cy="100" r="3.2" fill="#FFFFFF" />
+          <Circle cx="122.5" cy="100" r="3.2" fill="#FFFFFF" />
+
+          {/* boca animada */}
           <AnimatedPath
             animatedProps={propsBoca}
             stroke={colores.texto}
-            strokeWidth={5}
+            strokeWidth={5.5}
             strokeLinecap="round"
             fill="none"
           />
         </Svg>
       </Animated.View>
+
+      <TouchableOpacity onPress={onPresionarNombre} style={estilos.filaNombre} activeOpacity={0.6}>
+        <Text style={estilos.nombre}>{nombre}</Text>
+        <Text style={estilos.lapiz}>✏️</Text>
+      </TouchableOpacity>
 
       <Text style={estilos.mensaje}>{mensajePorSalud(salud)}</Text>
 
@@ -131,10 +155,10 @@ const estilos = StyleSheet.create({
   },
   glow: {
     position: 'absolute',
-    top: espaciado.lg - 10,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
+    top: espaciado.lg - 20,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
     backgroundColor: colores.mascotaGlow,
   },
   puntoFlotante: {
@@ -146,10 +170,24 @@ const estilos = StyleSheet.create({
   textoPuntoFlotante: {
     ...tipografia.titulo,
   },
+  filaNombre: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: espaciado.sm,
+    gap: espaciado.xs,
+  },
+  nombre: {
+    ...tipografia.titulo,
+    fontFamily: fuentes.extraNegrita,
+  },
+  lapiz: {
+    fontSize: 14,
+    opacity: 0.6,
+  },
   mensaje: {
     ...tipografia.subtitulo,
     textAlign: 'center',
-    marginTop: espaciado.sm,
+    marginTop: espaciado.xs,
     marginBottom: espaciado.md,
     paddingHorizontal: espaciado.lg,
   },

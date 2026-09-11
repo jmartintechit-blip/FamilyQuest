@@ -1,13 +1,15 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { colores, tipografia, espaciado } from '../theme';
+import { colores, tipografia, espaciado, radios } from '../theme';
 import { URL_BASE } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
 import Tarjeta from '../components/Tarjeta';
 import MascotaHero from '../components/mascota/MascotaHero';
 import BannerEvento from '../components/BannerEvento';
 import TareaItem from '../components/TareaItem';
+import CampoTexto from '../components/CampoTexto';
+import BotonPrincipal from '../components/BotonPrincipal';
 
 // Eventos de ejemplo para el "modo caos". El backend todavía no genera estos
 // eventos por su cuenta: esto es solo para poder mostrar y probar la parte
@@ -21,8 +23,11 @@ export default function InicioScreen() {
   const { usuario, token } = useAuth();
   const [tareas, setTareas] = useState([]);
   const [saludMascota, setSaludMascota] = useState(100);
+  const [nombreMascota, setNombreMascota] = useState('Brote');
   const [puntosFlotantes, setPuntosFlotantes] = useState([]);
   const [eventoActivo, setEventoActivo] = useState(null);
+  const [modalNombreVisible, setModalNombreVisible] = useState(false);
+  const [nombreEnEdicion, setNombreEnEdicion] = useState('');
 
   async function cargarTareas() {
     try {
@@ -39,6 +44,7 @@ export default function InicioScreen() {
       const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}`);
       const datos = await respuesta.json();
       setSaludMascota(datos.salud_mascota);
+      setNombreMascota(datos.nombre_mascota || 'Brote');
     } catch (error) {
       console.log('Error cargando familia', error);
     }
@@ -91,6 +97,38 @@ export default function InicioScreen() {
     }
   }
 
+  function abrirModalNombre() {
+    setNombreEnEdicion(nombreMascota);
+    setModalNombreVisible(true);
+  }
+
+  async function guardarNombreMascota() {
+    if (!nombreEnEdicion.trim()) return;
+
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/mascota`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ nombre_mascota: nombreEnEdicion.trim() }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      setNombreMascota(datos.nombre_mascota);
+      setModalNombreVisible(false);
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo guardar el nombre');
+    }
+  }
+
   // Demo del "modo caos": activa un evento de ejemplo unos segundos.
   // Sustituir por la lógica real en cuanto el backend genere estos eventos.
   function simularEventoEspecial() {
@@ -105,7 +143,12 @@ export default function InicioScreen() {
 
       <BannerEvento evento={eventoActivo} />
 
-      <MascotaHero salud={saludMascota} puntosFlotantes={puntosFlotantes} />
+      <MascotaHero
+        salud={saludMascota}
+        puntosFlotantes={puntosFlotantes}
+        nombre={nombreMascota}
+        onPresionarNombre={abrirModalNombre}
+      />
 
       <Tarjeta>
         <Text style={styles.seccion}>Tus tareas</Text>
@@ -117,6 +160,23 @@ export default function InicioScreen() {
       <TouchableOpacity onPress={simularEventoEspecial} style={{ marginBottom: espaciado.md }}>
         <Text style={styles.enlaceDemo}>✨ Simular evento especial (demo)</Text>
       </TouchableOpacity>
+
+      <Modal visible={modalNombreVisible} transparent animationType="fade" onRequestClose={() => setModalNombreVisible(false)}>
+        <View style={styles.fondoModal}>
+          <View style={styles.tarjetaModal}>
+            <Text style={[tipografia.subtitulo, { marginBottom: espaciado.sm }]}>Ponle nombre a tu mascota</Text>
+            <CampoTexto
+              placeholder="Nombre de la mascota"
+              value={nombreEnEdicion}
+              onChangeText={setNombreEnEdicion}
+              maxLength={20}
+              autoFocus
+            />
+            <BotonPrincipal titulo="Guardar" onPress={guardarNombreMascota} />
+            <BotonPrincipal titulo="Cancelar" variante="secundario" onPress={() => setModalNombreVisible(false)} />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -134,5 +194,19 @@ const styles = StyleSheet.create({
     ...tipografia.chico,
     color: colores.doradoOscuro,
     textAlign: 'center',
+  },
+  fondoModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: espaciado.lg,
+  },
+  tarjetaModal: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: colores.superficie,
+    borderRadius: radios.lg,
+    padding: espaciado.lg,
   },
 });

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Platform, KeyboardAvoidingView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { io } from 'socket.io-client';
 import { URL_BASE } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
@@ -91,7 +92,7 @@ export default function ChatScreen() {
       >
         {mensajes.length === 0 ? (
           <View style={styles.vacio}>
-            <Text style={styles.textoVacio}>💬</Text>
+            <Ionicons name="chatbubbles-outline" size={40} color={colores.textoSuave} style={{ marginBottom: espaciado.xs }} />
             <Text style={tipografia.cuerpoSuave}>Aún no hay mensajes. ¡Escribe el primero!</Text>
           </View>
         ) : (
@@ -139,10 +140,6 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       alignItems: 'center',
       justifyContent: 'center',
       gap: espaciado.xs,
-    },
-    textoVacio: {
-      fontSize: 40,
-      marginBottom: espaciado.xs,
     },
     filaInput: {
       flexDirection: 'row',

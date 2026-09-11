@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { URL_BASE } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
@@ -17,8 +18,8 @@ import BotonPrincipal from '../components/BotonPrincipal';
 // eventos por su cuenta: esto es solo para poder mostrar y probar la parte
 // visual (el banner) hasta que exista esa lógica en el servidor.
 const EVENTOS_DEMO = [
-  { tipo: 'hora_dorada', mensaje: '✨ Hora dorada: los puntos valen el doble durante 2 horas' },
-  { tipo: 'reto_familiar', mensaje: '🎯 Reto familiar: completad 3 tareas hoy y ganáis un bonus' },
+  { tipo: 'hora_dorada', mensaje: 'Hora dorada: los puntos valen el doble durante 2 horas' },
+  { tipo: 'reto_familiar', mensaje: 'Reto familiar: completad 3 tareas hoy y ganáis un bonus' },
 ];
 
 export default function InicioScreen() {
@@ -391,15 +392,19 @@ export default function InicioScreen() {
       />
 
       <TouchableOpacity onPress={() => setSelectorMascotaVisible(true)} style={styles.filaMonedas}>
-        <Text style={styles.textoMonedas}>🪙 {monedas} monedas</Text>
+        <View style={styles.filaMonedasIzquierda}>
+          <Ionicons name="logo-bitcoin" size={18} color={colores.doradoOscuro} />
+          <Text style={styles.textoMonedas}>{monedas} monedas</Text>
+        </View>
         <Text style={styles.enlaceCambiar}>Cambiar mascota</Text>
       </TouchableOpacity>
 
       <Tarjeta>
         <View style={styles.filaSeccion}>
           <Text style={styles.seccion}>Tus tareas</Text>
-          <TouchableOpacity onPress={abrirModalTarea}>
-            <Text style={styles.enlaceCambiar}>+ Añadir</Text>
+          <TouchableOpacity onPress={abrirModalTarea} style={styles.filaAnadir}>
+            <Ionicons name="add" size={16} color={colores.primario} />
+            <Text style={styles.enlaceCambiar}>Añadir</Text>
           </TouchableOpacity>
         </View>
         {tareas.map((tarea) => (
@@ -407,8 +412,9 @@ export default function InicioScreen() {
         ))}
       </Tarjeta>
 
-      <TouchableOpacity onPress={simularEventoEspecial} style={{ marginBottom: espaciado.md }}>
-        <Text style={styles.enlaceDemo}>✨ Simular evento especial (demo)</Text>
+      <TouchableOpacity onPress={simularEventoEspecial} style={styles.filaDemo}>
+        <Ionicons name="flash-outline" size={14} color={colores.doradoOscuro} />
+        <Text style={styles.enlaceDemo}>Simular evento especial (demo)</Text>
       </TouchableOpacity>
 
       <Modal visible={modalNombreVisible} transparent animationType="fade" onRequestClose={() => setModalNombreVisible(false)}>
@@ -530,6 +536,22 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       alignItems: 'center',
       marginBottom: espaciado.md,
       paddingHorizontal: espaciado.xs,
+    },
+    filaMonedasIzquierda: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: espaciado.xs,
+    },
+    filaAnadir: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    filaDemo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      marginBottom: espaciado.md,
     },
     textoMonedas: {
       ...tipografia.cuerpo,

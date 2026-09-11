@@ -1,18 +1,23 @@
 import { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTema } from '../../context/TemaContext';
 import { ESPECIES } from './especies';
 import { COSMETICOS } from './cosmeticos';
 
 const NOMBRES_SLOT = { sombrero: 'Sombrero', gafas: 'Gafas', cuello: 'Cuello' };
 
-function FilaOpcion({ emoji, nombre, desbloqueado, activo, costo, alcanza, onElegir, onDesbloquear, onQuitar }) {
+function FilaOpcion({ colorSwatch, icono, nombre, desbloqueado, activo, costo, alcanza, onElegir, onDesbloquear, onQuitar }) {
   const { colores, tipografia, espaciado, radios } = useTema();
   const estilos = crearEstilos(colores, tipografia, espaciado, radios);
 
   return (
     <View style={[estilos.fila, activo && estilos.filaActiva]}>
-      <Text style={estilos.emoji}>{emoji}</Text>
+      {colorSwatch ? (
+        <View style={[estilos.swatch, { backgroundColor: colorSwatch }]} />
+      ) : (
+        <Ionicons name={icono} size={20} color={colores.textoSuave} style={estilos.iconoFila} />
+      )}
       <Text style={[tipografia.cuerpo, { flex: 1 }]}>{nombre}</Text>
 
       {desbloqueado ? (
@@ -28,9 +33,10 @@ function FilaOpcion({ emoji, nombre, desbloqueado, activo, costo, alcanza, onEle
         <TouchableOpacity
           onPress={() => alcanza && onDesbloquear()}
           disabled={!alcanza}
-          style={[estilos.boton, alcanza ? estilos.botonSecundario : estilos.botonDeshabilitado]}
+          style={[estilos.boton, estilos.botonConIcono, alcanza ? estilos.botonSecundario : estilos.botonDeshabilitado]}
         >
-          <Text style={alcanza ? estilos.textoBotonSecundario : estilos.textoBotonDeshabilitado}>🔒 {costo}</Text>
+          <Ionicons name="lock-closed-outline" size={13} color={alcanza ? colores.primario : colores.textoSuave} />
+          <Text style={alcanza ? estilos.textoBotonSecundario : estilos.textoBotonDeshabilitado}>{costo}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -63,7 +69,10 @@ export default function SelectorMascota({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={estilos.fondo}>
         <View style={estilos.tarjeta}>
-          <Text style={[tipografia.cuerpoSuave, { marginBottom: espaciado.md }]}>🪙 {monedas} monedas familiares</Text>
+          <View style={estilos.filaMonedas}>
+            <Ionicons name="logo-bitcoin" size={16} color={colores.doradoOscuro} />
+            <Text style={[tipografia.cuerpoSuave, { marginLeft: 6 }]}>{monedas} monedas familiares</Text>
+          </View>
 
           <View style={estilos.pestanas}>
             <TouchableOpacity onPress={() => setPestana('mascota')} style={[estilos.pestana, pestana === 'mascota' && estilos.pestanaActiva]}>
@@ -82,7 +91,7 @@ export default function SelectorMascota({
                   return (
                     <FilaOpcion
                       key={clave}
-                      emoji={info.emoji}
+                      colorSwatch={info.colorCuerpo}
                       nombre={info.nombre}
                       desbloqueado={especiesDesbloqueadas.includes(clave)}
                       activo={especieActiva === clave}
@@ -104,7 +113,7 @@ export default function SelectorMascota({
                         return (
                           <FilaOpcion
                             key={clave}
-                            emoji={info.emoji}
+                            icono={info.icono}
                             nombre={info.nombre}
                             desbloqueado={cosmeticosDesbloqueados.includes(clave)}
                             activo={cosmeticosEquipados?.[slot] === clave}
@@ -144,6 +153,11 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       backgroundColor: colores.superficie,
       borderRadius: radios.lg,
       padding: espaciado.lg,
+    },
+    filaMonedas: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: espaciado.md,
     },
     pestanas: {
       flexDirection: 'row',
@@ -187,13 +201,24 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       backgroundColor: colores.primarioSuave,
       borderRadius: radios.sm,
     },
-    emoji: {
-      fontSize: 26,
+    swatch: {
+      width: 22,
+      height: 22,
+      borderRadius: radios.completo,
+    },
+    iconoFila: {
+      width: 22,
+      textAlign: 'center',
     },
     boton: {
       paddingVertical: espaciado.xs,
       paddingHorizontal: espaciado.sm,
       borderRadius: radios.sm,
+    },
+    botonConIcono: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
     },
     botonActivo: {
       backgroundColor: colores.primario,

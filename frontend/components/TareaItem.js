@@ -1,4 +1,5 @@
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming } from 'react-native-reanimated';
 import { useTema } from '../context/TemaContext';
 
@@ -19,13 +20,18 @@ export default function TareaItem({ tarea, onMarcar, onEliminar }) {
 
   return (
     <Animated.View style={[estilos.fila, estiloAnimado]}>
-      <Text style={estilos.icono}>{esPositiva ? '🌱' : '🥀'}</Text>
+      <Ionicons
+        name={esPositiva ? 'add-circle' : 'remove-circle'}
+        size={22}
+        color={esPositiva ? colores.primario : colores.error}
+        style={estilos.icono}
+      />
       <Text style={[tipografia.cuerpo, estilos.nombre]}>
         {tarea.nombre} ({tarea.puntos_valor > 0 ? '+' : ''}{tarea.puntos_valor})
       </Text>
       {onEliminar && (
         <TouchableOpacity onPress={() => onEliminar(tarea.id)} style={estilos.botonEliminar}>
-          <Text style={estilos.iconoEliminar}>🗑️</Text>
+          <Ionicons name="trash-outline" size={18} color={colores.textoSuave} />
         </TouchableOpacity>
       )}
       <TouchableOpacity onPress={alMarcar} style={estilos.boton}>
@@ -45,7 +51,6 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       borderBottomColor: colores.borde,
     },
     icono: {
-      fontSize: 20,
       marginRight: espaciado.sm,
     },
     nombre: {
@@ -54,10 +59,6 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
     botonEliminar: {
       paddingHorizontal: espaciado.xs,
       marginRight: espaciado.xs,
-    },
-    iconoEliminar: {
-      fontSize: 16,
-      opacity: 0.6,
     },
     boton: {
       backgroundColor: colores.primarioSuave,

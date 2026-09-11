@@ -117,8 +117,22 @@ app.post('/familias/unirse', verificarToken, (req, res) => {
 
 app.get('/familias/:id/usuarios', (req, res) => {
     const { id } = req.params;
-    const usuarios = db.prepare('SELECT * FROM usuarios WHERE familia_id = ?').all(id);
+    const usuarios = db.prepare(
+        'SELECT id, nombre, email, puntos_totales, fecha_creacion FROM usuarios WHERE familia_id = ? ORDER BY puntos_totales DESC'
+    ).all(id);
     res.json(usuarios);
+});
+
+app.put('/usuarios/:id/salir-familia', verificarToken, (req, res) => {
+    const { id } = req.params;
+
+    if (req.usuario.id !== Number(id)) {
+        return res.status(403).json({ error: 'No puedes hacer esto en nombre de otro usuario' });
+    }
+
+    db.prepare('UPDATE usuarios SET familia_id = NULL, puntos_totales = 0 WHERE id = ?').run(id);
+
+    res.json({ mensaje: 'Has salido de la familia' });
 });
 
 app.post('/tareas', verificarToken, (req, res) => {

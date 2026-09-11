@@ -1,9 +1,16 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useTema } from '../context/TemaContext';
 
 function colorPorNombre(nombre, coloresAvatar) {
   const indice = nombre.charCodeAt(0) % coloresAvatar.length;
   return coloresAvatar[indice];
+}
+
+function formatearHora(fechaHora) {
+  const fecha = new Date(fechaHora.replace(' ', 'T'));
+  if (Number.isNaN(fecha.getTime())) return '';
+  return fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function BurbujaChat({ mensaje, esPropio }) {
@@ -12,17 +19,18 @@ export default function BurbujaChat({ mensaje, esPropio }) {
   const coloresAvatar = [colores.primario, colores.acento, colores.dorado, colores.primarioOscuro];
 
   return (
-    <View style={[estilos.fila, esPropio && estilos.filaPropia]}>
+    <Animated.View entering={FadeInUp.duration(250)} style={[estilos.fila, esPropio && estilos.filaPropia]}>
       {!esPropio && (
-        <View style={[estilos.avatar, { backgroundColor: colorPorNombre(mensaje.autor, coloresAvatar) }]}>
+        <Animated.View style={[estilos.avatar, { backgroundColor: colorPorNombre(mensaje.autor, coloresAvatar) }]}>
           <Text style={estilos.iniciales}>{mensaje.autor.charAt(0).toUpperCase()}</Text>
-        </View>
+        </Animated.View>
       )}
-      <View style={[estilos.burbuja, esPropio ? estilos.burbujaPropia : estilos.burbujaAjena]}>
+      <Animated.View style={[estilos.burbuja, esPropio ? estilos.burbujaPropia : estilos.burbujaAjena]}>
         {!esPropio && <Text style={estilos.autor}>{mensaje.autor}</Text>}
         <Text style={[tipografia.cuerpo, esPropio && estilos.textoPropio]}>{mensaje.texto}</Text>
-      </View>
-    </View>
+        <Text style={[estilos.hora, esPropio && estilos.horaPropia]}>{formatearHora(mensaje.fecha_hora)}</Text>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -67,6 +75,16 @@ function crearEstilos(colores, tipografia, fuentes, espaciado, radios) {
     },
     textoPropio: {
       color: colores.textoSobrePrimario,
+    },
+    hora: {
+      ...tipografia.chico,
+      fontSize: 10,
+      color: colores.textoSuave,
+      alignSelf: 'flex-end',
+      marginTop: 2,
+    },
+    horaPropia: {
+      color: 'rgba(255,255,255,0.75)',
     },
   });
 }

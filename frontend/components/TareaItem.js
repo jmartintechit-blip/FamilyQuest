@@ -2,7 +2,7 @@ import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming } from 'react-native-reanimated';
 import { useTema } from '../context/TemaContext';
 
-export default function TareaItem({ tarea, onMarcar }) {
+export default function TareaItem({ tarea, onMarcar, onEliminar }) {
   const { colores, tipografia, espaciado, radios } = useTema();
   const estilos = crearEstilos(colores, tipografia, espaciado, radios);
   const escala = useSharedValue(1);
@@ -23,6 +23,11 @@ export default function TareaItem({ tarea, onMarcar }) {
       <Text style={[tipografia.cuerpo, estilos.nombre]}>
         {tarea.nombre} ({tarea.puntos_valor > 0 ? '+' : ''}{tarea.puntos_valor})
       </Text>
+      {onEliminar && (
+        <TouchableOpacity onPress={() => onEliminar(tarea.id)} style={estilos.botonEliminar}>
+          <Text style={estilos.iconoEliminar}>🗑️</Text>
+        </TouchableOpacity>
+      )}
       <TouchableOpacity onPress={alMarcar} style={estilos.boton}>
         <Text style={estilos.textoBoton}>Marcar hecha</Text>
       </TouchableOpacity>
@@ -45,6 +50,14 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
     },
     nombre: {
       flex: 1,
+    },
+    botonEliminar: {
+      paddingHorizontal: espaciado.xs,
+      marginRight: espaciado.xs,
+    },
+    iconoEliminar: {
+      fontSize: 16,
+      opacity: 0.6,
     },
     boton: {
       backgroundColor: colores.primarioSuave,

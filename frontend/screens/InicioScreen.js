@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { URL_BASE } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
 import { useTema } from '../context/TemaContext';
+import { notificarLocalmente } from '../utils/notificaciones';
 import Tarjeta from '../components/Tarjeta';
 import MascotaHero from '../components/mascota/MascotaHero';
 import SelectorMascota from '../components/mascota/SelectorMascota';
@@ -39,6 +40,10 @@ export default function InicioScreen() {
   const [modalNombreVisible, setModalNombreVisible] = useState(false);
   const [nombreEnEdicion, setNombreEnEdicion] = useState('');
   const [selectorMascotaVisible, setSelectorMascotaVisible] = useState(false);
+  const [modalTareaVisible, setModalTareaVisible] = useState(false);
+  const [nombreNuevaTarea, setNombreNuevaTarea] = useState('');
+  const [tipoNuevaTarea, setTipoNuevaTarea] = useState('positiva');
+  const [puntosNuevaTarea, setPuntosNuevaTarea] = useState('');
 
   async function cargarTareas() {
     try {
@@ -54,6 +59,7 @@ export default function InicioScreen() {
     try {
       const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}`);
       const datos = await respuesta.json();
+      if (!respuesta.ok) return;
       setSaludMascota(datos.salud_mascota);
       setNombreMascota(datos.nombre_mascota || 'Brote');
       setEspecieMascota(datos.especie_mascota || 'manzana');
@@ -140,7 +146,11 @@ export default function InicioScreen() {
         return;
       }
 
-      if (tarea) mostrarPuntoFlotante(tarea);
+      if (tarea) {
+        mostrarPuntoFlotante(tarea);
+        const signo = tarea.puntos_valor > 0 ? '+' : '';
+        notificarLocalmente('¡Tarea completada! 🎉', `${tarea.nombre}: ${signo}${tarea.puntos_valor} puntos`);
+      }
       cargarFamilia();
     } catch (error) {
       Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
@@ -283,6 +293,80 @@ export default function InicioScreen() {
     }
   }
 
+  function abrirModalTarea() {
+    setNombreNuevaTarea('');
+    setTipoNuevaTarea('positiva');
+    setPuntosNuevaTarea('');
+    setModalTareaVisible(true);
+  }
+
+  async function crearTarea() {
+    const magnitud = parseInt(puntosNuevaTarea, 10);
+
+    if (!nombreNuevaTarea.trim()) {
+      Alert.alert('Falta el nombre', 'Escribe un nombre para la tarea');
+      return;
+    }
+    if (!magnitud || magnitud <= 0) {
+      Alert.alert('Puntos no válidos', 'Escribe un número de puntos mayor que 0');
+      return;
+    }
+
+    try {
+      const respuesta = await fetch(`${URL_BASE}/tareas`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          familia_id: usuario.familia_id,
+          nombre: nombreNuevaTarea.trim(),
+          puntos_valor: tipoNuevaTarea === 'positiva' ? magnitud : -magnitud,
+          tipo: tipoNuevaTarea,
+        }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      setModalTareaVisible(false);
+      cargarTareas();
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo crear la tarea');
+    }
+  }
+
+  function confirmarEliminarTarea(tareaId) {
+    Alert.alert('¿Eliminar tarea?', 'Esto no borra el historial de puntos ya ganados con ella.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: () => eliminarTarea(tareaId) },
+    ]);
+  }
+
+  async function eliminarTarea(tareaId) {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/tareas/${tareaId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!respuesta.ok) {
+        const datos = await respuesta.json();
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      cargarTareas();
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo eliminar la tarea');
+    }
+  }
+
   // Demo del "modo caos": activa un evento de ejemplo unos segundos.
   // Sustituir por la lógica real en cuanto el backend genere estos eventos.
   function simularEventoEspecial() {
@@ -312,9 +396,14 @@ export default function InicioScreen() {
       </TouchableOpacity>
 
       <Tarjeta>
-        <Text style={styles.seccion}>Tus tareas</Text>
+        <View style={styles.filaSeccion}>
+          <Text style={styles.seccion}>Tus tareas</Text>
+          <TouchableOpacity onPress={abrirModalTarea}>
+            <Text style={styles.enlaceCambiar}>+ Añadir</Text>
+          </TouchableOpacity>
+        </View>
         {tareas.map((tarea) => (
-          <TareaItem key={tarea.id} tarea={tarea} onMarcar={marcarTareaHecha} />
+          <TareaItem key={tarea.id} tarea={tarea} onMarcar={marcarTareaHecha} onEliminar={confirmarEliminarTarea} />
         ))}
       </Tarjeta>
 
@@ -335,6 +424,43 @@ export default function InicioScreen() {
             />
             <BotonPrincipal titulo="Guardar" onPress={guardarNombreMascota} />
             <BotonPrincipal titulo="Cancelar" variante="secundario" onPress={() => setModalNombreVisible(false)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalTareaVisible} transparent animationType="fade" onRequestClose={() => setModalTareaVisible(false)}>
+        <View style={styles.fondoModal}>
+          <View style={styles.tarjetaModal}>
+            <Text style={[tipografia.subtitulo, { marginBottom: espaciado.sm }]}>Nueva tarea</Text>
+            <CampoTexto
+              placeholder="Nombre de la tarea"
+              value={nombreNuevaTarea}
+              onChangeText={setNombreNuevaTarea}
+              maxLength={40}
+              autoFocus
+            />
+            <View style={styles.filaTipo}>
+              <TouchableOpacity
+                onPress={() => setTipoNuevaTarea('positiva')}
+                style={[styles.opcionTipo, tipoNuevaTarea === 'positiva' && styles.opcionTipoActiva]}
+              >
+                <Text style={tipoNuevaTarea === 'positiva' ? styles.textoTipoActivo : styles.textoTipo}>🌱 Suma puntos</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setTipoNuevaTarea('negativa')}
+                style={[styles.opcionTipo, tipoNuevaTarea === 'negativa' && styles.opcionTipoActiva]}
+              >
+                <Text style={tipoNuevaTarea === 'negativa' ? styles.textoTipoActivo : styles.textoTipo}>🥀 Resta puntos</Text>
+              </TouchableOpacity>
+            </View>
+            <CampoTexto
+              placeholder="Puntos (ej. 5)"
+              value={puntosNuevaTarea}
+              onChangeText={setPuntosNuevaTarea}
+              keyboardType="numeric"
+            />
+            <BotonPrincipal titulo="Crear tarea" onPress={crearTarea} />
+            <BotonPrincipal titulo="Cancelar" variante="secundario" onPress={() => setModalTareaVisible(false)} />
           </View>
         </View>
       </Modal>
@@ -366,7 +492,37 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
     },
     seccion: {
       ...tipografia.subtitulo,
+    },
+    filaSeccion: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       marginBottom: espaciado.sm,
+    },
+    filaTipo: {
+      flexDirection: 'row',
+      gap: espaciado.sm,
+      marginBottom: espaciado.md,
+    },
+    opcionTipo: {
+      flex: 1,
+      paddingVertical: espaciado.sm,
+      alignItems: 'center',
+      borderRadius: radios.md,
+      borderWidth: 1.5,
+      borderColor: colores.borde,
+    },
+    opcionTipoActiva: {
+      backgroundColor: colores.primarioSuave,
+      borderColor: colores.primario,
+    },
+    textoTipo: {
+      ...tipografia.chico,
+      color: colores.textoSuave,
+    },
+    textoTipoActivo: {
+      ...tipografia.chico,
+      color: colores.primarioOscuro,
     },
     filaMonedas: {
       flexDirection: 'row',

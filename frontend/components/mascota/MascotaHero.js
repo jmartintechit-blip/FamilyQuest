@@ -14,7 +14,8 @@ import Animated, {
   FadeInUp,
   FadeOutUp,
 } from 'react-native-reanimated';
-import { colores, tipografia, fuentes, espaciado, radios } from '../../theme';
+import { colorMascota } from '../../theme';
+import { useTema } from '../../context/TemaContext';
 import { ESPECIES, Orejas, Marcas } from './especies';
 import Cosmeticos from './cosmeticos';
 
@@ -39,6 +40,8 @@ function mensajePorSalud(salud) {
 // nombre / onPresionarNombre: el nombre que le puso la familia a la mascota,
 // tocable para poder cambiarlo. especie: 'manzana' | 'oso' | 'capibara' | ...
 export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPresionarNombre, especie = 'manzana', cosmeticosEquipados }) {
+  const { colores, tipografia, fuentes, espaciado, radios } = useTema();
+  const estilos = crearEstilos(colores, tipografia, fuentes, espaciado, radios);
   const info = ESPECIES[especie] || ESPECIES.manzana;
   const saludAnimada = useSharedValue(salud);
   const respiracion = useSharedValue(0);
@@ -90,7 +93,7 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
 
   const estiloBarra = useAnimatedStyle(() => ({
     width: `${saludAnimada.value}%`,
-    backgroundColor: interpolateColor(saludAnimada.value, [0, 50, 100], colores.mascotaGradiente),
+    backgroundColor: interpolateColor(saludAnimada.value, [0, 50, 100], colorMascota.gradiente),
   }));
 
   return (
@@ -124,19 +127,19 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
           <Marcas especie={especie} colorCuerpo={info.colorCuerpo} colorOscuro={info.colorOscuro} />
 
           {/* mofletes sonrosados */}
-          <AnimatedEllipse animatedProps={propsMofletes} cx="58" cy="132" rx="14" ry="9" fill={colores.mascotaMofletes} />
-          <AnimatedEllipse animatedProps={propsMofletes} cx="142" cy="132" rx="14" ry="9" fill={colores.mascotaMofletes} />
+          <AnimatedEllipse animatedProps={propsMofletes} cx="58" cy="132" rx="14" ry="9" fill={colorMascota.mofletes} />
+          <AnimatedEllipse animatedProps={propsMofletes} cx="142" cy="132" rx="14" ry="9" fill={colorMascota.mofletes} />
 
           {/* ojos grandes con brillo, para más ternura */}
-          <Circle cx="74" cy="104" r="11" fill={colores.texto} />
-          <Circle cx="126" cy="104" r="11" fill={colores.texto} />
+          <Circle cx="74" cy="104" r="11" fill={colorMascota.rasgos} />
+          <Circle cx="126" cy="104" r="11" fill={colorMascota.rasgos} />
           <Circle cx="70.5" cy="100" r="3.2" fill="#FFFFFF" />
           <Circle cx="122.5" cy="100" r="3.2" fill="#FFFFFF" />
 
           {/* boca animada */}
           <AnimatedPath
             animatedProps={propsBoca}
-            stroke={colores.texto}
+            stroke={colorMascota.rasgos}
             strokeWidth={5.5}
             strokeLinecap="round"
             fill="none"
@@ -161,62 +164,64 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
   );
 }
 
-const estilos = StyleSheet.create({
-  contenedor: {
-    alignItems: 'center',
-    paddingVertical: espaciado.lg,
-  },
-  glow: {
-    position: 'absolute',
-    top: espaciado.lg - 20,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: colores.mascotaGlow,
-  },
-  puntoFlotante: {
-    position: 'absolute',
-    top: espaciado.md,
-    alignSelf: 'center',
-    zIndex: 10,
-  },
-  textoPuntoFlotante: {
-    ...tipografia.titulo,
-  },
-  filaNombre: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: espaciado.sm,
-    gap: espaciado.xs,
-  },
-  nombre: {
-    ...tipografia.titulo,
-    fontFamily: fuentes.extraNegrita,
-  },
-  lapiz: {
-    fontSize: 14,
-    opacity: 0.6,
-  },
-  mensaje: {
-    ...tipografia.subtitulo,
-    textAlign: 'center',
-    marginTop: espaciado.xs,
-    marginBottom: espaciado.md,
-    paddingHorizontal: espaciado.lg,
-  },
-  barraFondo: {
-    width: '80%',
-    height: 12,
-    borderRadius: radios.completo,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-    overflow: 'hidden',
-  },
-  barraRelleno: {
-    height: '100%',
-    borderRadius: radios.completo,
-  },
-  textoSalud: {
-    ...tipografia.chico,
-    marginTop: espaciado.xs,
-  },
-});
+function crearEstilos(colores, tipografia, fuentes, espaciado, radios) {
+  return StyleSheet.create({
+    contenedor: {
+      alignItems: 'center',
+      paddingVertical: espaciado.lg,
+    },
+    glow: {
+      position: 'absolute',
+      top: espaciado.lg - 20,
+      width: 240,
+      height: 240,
+      borderRadius: 120,
+      backgroundColor: colorMascota.glow,
+    },
+    puntoFlotante: {
+      position: 'absolute',
+      top: espaciado.md,
+      alignSelf: 'center',
+      zIndex: 10,
+    },
+    textoPuntoFlotante: {
+      ...tipografia.titulo,
+    },
+    filaNombre: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: espaciado.sm,
+      gap: espaciado.xs,
+    },
+    nombre: {
+      ...tipografia.titulo,
+      fontFamily: fuentes.extraNegrita,
+    },
+    lapiz: {
+      fontSize: 14,
+      opacity: 0.6,
+    },
+    mensaje: {
+      ...tipografia.subtitulo,
+      textAlign: 'center',
+      marginTop: espaciado.xs,
+      marginBottom: espaciado.md,
+      paddingHorizontal: espaciado.lg,
+    },
+    barraFondo: {
+      width: '80%',
+      height: 12,
+      borderRadius: radios.completo,
+      backgroundColor: 'rgba(0,0,0,0.08)',
+      overflow: 'hidden',
+    },
+    barraRelleno: {
+      height: '100%',
+      borderRadius: radios.completo,
+    },
+    textoSalud: {
+      ...tipografia.chico,
+      marginTop: espaciado.xs,
+    },
+  });
+}

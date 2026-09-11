@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colores, tipografia, espaciado } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import { useTema } from '../context/TemaContext';
 import BotonPrincipal from '../components/BotonPrincipal';
 
 // Se muestra cuando el usuario decidió "saltar por ahora" en vez de crear o
@@ -8,6 +8,8 @@ import BotonPrincipal from '../components/BotonPrincipal';
 // mostrar, así que de momento solo puede cerrar sesión y volver a intentarlo.
 export default function SinFamiliaScreen() {
   const { usuario, cerrarSesion } = useAuth();
+  const { colores, tipografia, espaciado } = useTema();
+  const styles = crearEstilos(colores, espaciado);
 
   return (
     <View style={styles.container}>
@@ -20,12 +22,14 @@ export default function SinFamiliaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colores.fondo,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: espaciado.lg,
-  },
-});
+function crearEstilos(colores, espaciado) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colores.fondo,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: espaciado.lg,
+    },
+  });
+}

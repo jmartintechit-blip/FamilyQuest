@@ -1,30 +1,26 @@
-// Identidad visual de la app: un solo lugar donde vive cada color, tamaño de
-// texto y espaciado. Si mañana queremos cambiar "el look" de toda la app,
-// se toca este archivo y no cada pantalla por separado.
+// Identidad visual de la app. A partir de la Fase 3 los colores y el tamaño
+// de letra dejan de ser fijos: viven en dos paletas (clara/oscura) y una
+// función que arma la tipografía, y el que decide cuál usar en cada momento
+// es TemaContext (ver context/TemaContext.js) según el modo y el tamaño de
+// letra que haya elegido la familia. Aquí solo se define el contenido de
+// cada paleta — quien quiera los valores "en vivo" debe usar useTema().
 
-export const colores = {
-  // Fondo general: blanco roto con un toque frío, para una sensación más
-  // "limpia" que el crema cálido anterior (que leía un poco vintage/rústico)
+export const paletaClara = {
   fondo: '#F6FAF7',
-  // Superficie de tarjetas y inputs
   superficie: '#FFFFFF',
   superficieSuave: '#EEF4F0',
 
-  // Verde más vivo y saturado que antes — menos "salvia apagada", más fresco
   primario: '#2FA35D',
   primarioOscuro: '#1F7A45',
   primarioSuave: '#DBF3E3',
 
-  // Coral cálido: color de acento para destacar puntos, alertas suaves
   acento: '#FF8A65',
   acentoSuave: '#FFE4D9',
 
-  // Dorado/miel: reservado para el "modo caos" (eventos especiales tipo Hora Dorada)
   dorado: '#FFC94D',
   doradoSuave: '#FFF3D6',
   doradoOscuro: '#8A5A00',
 
-  // Textos: gris muy oscuro neutro (ni negro puro ni marrón cálido)
   texto: '#2B2E2C',
   textoSuave: '#767F7A',
   textoSobrePrimario: '#FFFFFF',
@@ -32,13 +28,40 @@ export const colores = {
   borde: '#E1E8E3',
   error: '#E0574F',
   errorSuave: '#FCE4E1',
+};
 
-  // Gradiente continuo de salud de la mascota (0 -> 50 -> 100), usado con
-  // interpolateColor para que el color cambie de forma gradual, no a saltos.
-  // Ahora usa colores mucho más vivos y saturados en vez de tonos apagados.
-  mascotaGradiente: ['#F2765C', '#FFC94D', '#2FA35D'],
-  mascotaGlow: '#FFF3D6',
-  mascotaMofletes: '#FF9E8F',
+export const paletaOscura = {
+  fondo: '#121814',
+  superficie: '#1C2420',
+  superficieSuave: '#242D28',
+
+  primario: '#3DBE75',
+  primarioOscuro: '#2FA35D',
+  primarioSuave: '#1F3A2A',
+
+  acento: '#FF9670',
+  acentoSuave: '#3A2620',
+
+  dorado: '#FFC94D',
+  doradoSuave: '#3A2E10',
+  doradoOscuro: '#FFD98A',
+
+  texto: '#EDF2EF',
+  textoSuave: '#9BA79F',
+  textoSobrePrimario: '#0D140F',
+
+  borde: '#2E3830',
+  error: '#FF6B62',
+  errorSuave: '#3A2220',
+};
+
+// Colores propios de la mascota: no cambian con el modo claro/oscuro,
+// porque son parte de su identidad (salud, mofletes, rasgos), no de la interfaz.
+export const colorMascota = {
+  gradiente: ['#F2765C', '#FFC94D', '#2FA35D'],
+  glow: '#FFF3D6',
+  mofletes: '#FF9E8F',
+  rasgos: '#2B2E2C', // ojos y boca: siempre oscuros, en cualquier modo
 };
 
 // Nombres de fuente de @expo-google-fonts/nunito. Se cargan de forma async
@@ -50,14 +73,25 @@ export const fuentes = {
   extraNegrita: 'Nunito_800ExtraBold',
 };
 
-export const tipografia = {
-  tituloGrande: { fontSize: 28, fontFamily: fuentes.extraNegrita, color: colores.texto },
-  titulo: { fontSize: 22, fontFamily: fuentes.negrita, color: colores.texto },
-  subtitulo: { fontSize: 18, fontFamily: fuentes.medio, color: colores.texto },
-  cuerpo: { fontSize: 16, fontFamily: fuentes.regular, color: colores.texto },
-  cuerpoSuave: { fontSize: 16, fontFamily: fuentes.regular, color: colores.textoSuave },
-  chico: { fontSize: 14, fontFamily: fuentes.regular, color: colores.textoSuave },
+// Tamaños de letra disponibles en Ajustes. El multiplicador escala todos los
+// tamaños de golpe, sin tener que definir una escala nueva por cada opción.
+export const TAMANOS_FUENTE = {
+  normal: { etiqueta: 'Normal', escala: 1 },
+  grande: { etiqueta: 'Grande', escala: 1.15 },
+  extra: { etiqueta: 'Muy grande', escala: 1.3 },
 };
+
+// Arma los estilos de texto para una paleta y una escala concretas.
+export function crearTipografia(colores, escala = 1) {
+  return {
+    tituloGrande: { fontSize: 28 * escala, fontFamily: fuentes.extraNegrita, color: colores.texto },
+    titulo: { fontSize: 22 * escala, fontFamily: fuentes.negrita, color: colores.texto },
+    subtitulo: { fontSize: 18 * escala, fontFamily: fuentes.medio, color: colores.texto },
+    cuerpo: { fontSize: 16 * escala, fontFamily: fuentes.regular, color: colores.texto },
+    cuerpoSuave: { fontSize: 16 * escala, fontFamily: fuentes.regular, color: colores.textoSuave },
+    chico: { fontSize: 14 * escala, fontFamily: fuentes.regular, color: colores.textoSuave },
+  };
+}
 
 export const espaciado = {
   xs: 4,

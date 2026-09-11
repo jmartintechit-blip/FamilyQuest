@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { io } from 'socket.io-client';
-import { colores, tipografia, espaciado, radios } from '../theme';
 import { URL_BASE } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
+import { useTema } from '../context/TemaContext';
 import CampoTexto from '../components/CampoTexto';
 import BurbujaChat from '../components/BurbujaChat';
 
 export default function ChatScreen() {
   const { usuario, token } = useAuth();
+  const { colores, tipografia, espaciado, radios } = useTema();
+  const styles = crearEstilos(colores, tipografia, espaciado, radios);
   const [mensajes, setMensajes] = useState([]);
   const [textoMensaje, setTextoMensaje] = useState('');
 
@@ -82,33 +84,35 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colores.fondo,
-    paddingTop: 60,
-  },
-  titulo: {
-    paddingHorizontal: espaciado.md,
-    marginBottom: espaciado.sm,
-  },
-  cajaChat: {
-    flex: 1,
-  },
-  filaInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: espaciado.md,
-    gap: espaciado.sm,
-  },
-  botonEnviar: {
-    backgroundColor: colores.primario,
-    borderRadius: radios.md,
-    paddingHorizontal: espaciado.md,
-    paddingVertical: espaciado.md,
-  },
-  textoBotonEnviar: {
-    ...tipografia.cuerpo,
-    color: colores.textoSobrePrimario,
-  },
-});
+function crearEstilos(colores, tipografia, espaciado, radios) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colores.fondo,
+      paddingTop: 60,
+    },
+    titulo: {
+      paddingHorizontal: espaciado.md,
+      marginBottom: espaciado.sm,
+    },
+    cajaChat: {
+      flex: 1,
+    },
+    filaInput: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: espaciado.md,
+      gap: espaciado.sm,
+    },
+    botonEnviar: {
+      backgroundColor: colores.primario,
+      borderRadius: radios.md,
+      paddingHorizontal: espaciado.md,
+      paddingVertical: espaciado.md,
+    },
+    textoBotonEnviar: {
+      ...tipografia.cuerpo,
+      color: colores.textoSobrePrimario,
+    },
+  });
+}

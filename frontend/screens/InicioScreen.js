@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { colores, tipografia, espaciado, radios } from '../theme';
 import { URL_BASE } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
+import { useTema } from '../context/TemaContext';
 import Tarjeta from '../components/Tarjeta';
 import MascotaHero from '../components/mascota/MascotaHero';
 import SelectorMascota from '../components/mascota/SelectorMascota';
@@ -22,6 +22,8 @@ const EVENTOS_DEMO = [
 
 export default function InicioScreen() {
   const { usuario, token } = useAuth();
+  const { colores, tipografia, espaciado, radios } = useTema();
+  const styles = crearEstilos(colores, tipografia, espaciado, radios);
   const [tareas, setTareas] = useState([]);
   const [saludMascota, setSaludMascota] = useState(100);
   const [nombreMascota, setNombreMascota] = useState('Brote');
@@ -356,47 +358,49 @@ export default function InicioScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colores.fondo,
-  },
-  seccion: {
-    ...tipografia.subtitulo,
-    marginBottom: espaciado.sm,
-  },
-  filaMonedas: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: espaciado.md,
-    paddingHorizontal: espaciado.xs,
-  },
-  textoMonedas: {
-    ...tipografia.cuerpo,
-    color: colores.doradoOscuro,
-  },
-  enlaceCambiar: {
-    ...tipografia.chico,
-    color: colores.primario,
-  },
-  enlaceDemo: {
-    ...tipografia.chico,
-    color: colores.doradoOscuro,
-    textAlign: 'center',
-  },
-  fondoModal: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: espaciado.lg,
-  },
-  tarjetaModal: {
-    width: '100%',
-    maxWidth: 360,
-    backgroundColor: colores.superficie,
-    borderRadius: radios.lg,
-    padding: espaciado.lg,
-  },
-});
+function crearEstilos(colores, tipografia, espaciado, radios) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colores.fondo,
+    },
+    seccion: {
+      ...tipografia.subtitulo,
+      marginBottom: espaciado.sm,
+    },
+    filaMonedas: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: espaciado.md,
+      paddingHorizontal: espaciado.xs,
+    },
+    textoMonedas: {
+      ...tipografia.cuerpo,
+      color: colores.doradoOscuro,
+    },
+    enlaceCambiar: {
+      ...tipografia.chico,
+      color: colores.primario,
+    },
+    enlaceDemo: {
+      ...tipografia.chico,
+      color: colores.doradoOscuro,
+      textAlign: 'center',
+    },
+    fondoModal: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: espaciado.lg,
+    },
+    tarjetaModal: {
+      width: '100%',
+      maxWidth: 360,
+      backgroundColor: colores.superficie,
+      borderRadius: radios.lg,
+      padding: espaciado.lg,
+    },
+  });
+}

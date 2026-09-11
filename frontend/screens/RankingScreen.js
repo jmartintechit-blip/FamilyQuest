@@ -1,14 +1,16 @@
 import { useState, useCallback } from 'react';
 import { StyleSheet, Text, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { colores, tipografia, espaciado } from '../theme';
 import { URL_BASE } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
+import { useTema } from '../context/TemaContext';
 import Tarjeta from '../components/Tarjeta';
 import RankingLista from '../components/RankingLista';
 
 export default function RankingScreen() {
   const { usuario } = useAuth();
+  const { colores, tipografia, espaciado } = useTema();
+  const styles = crearEstilos(colores);
   const [ranking, setRanking] = useState([]);
 
   async function cargarRanking() {
@@ -37,9 +39,11 @@ export default function RankingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colores.fondo,
-  },
-});
+function crearEstilos(colores) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colores.fondo,
+    },
+  });
+}

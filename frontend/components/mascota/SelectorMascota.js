@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { colores, tipografia, espaciado, radios } from '../../theme';
+import { useTema } from '../../context/TemaContext';
 import { ESPECIES } from './especies';
 import { COSMETICOS } from './cosmeticos';
 
 const NOMBRES_SLOT = { sombrero: 'Sombrero', gafas: 'Gafas', cuello: 'Cuello' };
 
 function FilaOpcion({ emoji, nombre, desbloqueado, activo, costo, alcanza, onElegir, onDesbloquear, onQuitar }) {
+  const { colores, tipografia, espaciado, radios } = useTema();
+  const estilos = crearEstilos(colores, tipografia, espaciado, radios);
+
   return (
     <View style={[estilos.fila, activo && estilos.filaActiva]}>
       <Text style={estilos.emoji}>{emoji}</Text>
@@ -52,6 +55,8 @@ export default function SelectorMascota({
   onEquiparCosmetico,
   onDesbloquearCosmetico,
 }) {
+  const { colores, tipografia, espaciado, radios } = useTema();
+  const estilos = crearEstilos(colores, tipografia, espaciado, radios);
   const [pestana, setPestana] = useState('mascota');
 
   return (
@@ -124,93 +129,95 @@ export default function SelectorMascota({
   );
 }
 
-const estilos = StyleSheet.create({
-  fondo: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: espaciado.lg,
-  },
-  tarjeta: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: colores.superficie,
-    borderRadius: radios.lg,
-    padding: espaciado.lg,
-  },
-  pestanas: {
-    flexDirection: 'row',
-    backgroundColor: colores.superficieSuave,
-    borderRadius: radios.md,
-    padding: 4,
-    marginBottom: espaciado.sm,
-  },
-  pestana: {
-    flex: 1,
-    paddingVertical: espaciado.xs,
-    alignItems: 'center',
-    borderRadius: radios.sm,
-  },
-  pestanaActiva: {
-    backgroundColor: colores.primario,
-  },
-  textoPestana: {
-    ...tipografia.chico,
-    color: colores.textoSuave,
-  },
-  textoPestanaActiva: {
-    ...tipografia.chico,
-    color: colores.textoSobrePrimario,
-  },
-  tituloSlot: {
-    ...tipografia.chico,
-    color: colores.textoSuave,
-    marginTop: espaciado.sm,
-    marginBottom: espaciado.xs,
-  },
-  fila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: espaciado.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colores.borde,
-    gap: espaciado.sm,
-  },
-  filaActiva: {
-    backgroundColor: colores.primarioSuave,
-    borderRadius: radios.sm,
-  },
-  emoji: {
-    fontSize: 26,
-  },
-  boton: {
-    paddingVertical: espaciado.xs,
-    paddingHorizontal: espaciado.sm,
-    borderRadius: radios.sm,
-  },
-  botonActivo: {
-    backgroundColor: colores.primario,
-  },
-  botonSecundario: {
-    borderWidth: 1.5,
-    borderColor: colores.primario,
-  },
-  botonDeshabilitado: {
-    borderWidth: 1.5,
-    borderColor: colores.borde,
-  },
-  textoBotonActivo: {
-    color: colores.textoSobrePrimario,
-  },
-  textoBotonSecundario: {
-    color: colores.primario,
-  },
-  textoBotonDeshabilitado: {
-    color: colores.textoSuave,
-  },
-  cerrar: {
-    marginTop: espaciado.md,
-    alignItems: 'center',
-  },
-});
+function crearEstilos(colores, tipografia, espaciado, radios) {
+  return StyleSheet.create({
+    fondo: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: espaciado.lg,
+    },
+    tarjeta: {
+      width: '100%',
+      maxWidth: 380,
+      backgroundColor: colores.superficie,
+      borderRadius: radios.lg,
+      padding: espaciado.lg,
+    },
+    pestanas: {
+      flexDirection: 'row',
+      backgroundColor: colores.superficieSuave,
+      borderRadius: radios.md,
+      padding: 4,
+      marginBottom: espaciado.sm,
+    },
+    pestana: {
+      flex: 1,
+      paddingVertical: espaciado.xs,
+      alignItems: 'center',
+      borderRadius: radios.sm,
+    },
+    pestanaActiva: {
+      backgroundColor: colores.primario,
+    },
+    textoPestana: {
+      ...tipografia.chico,
+      color: colores.textoSuave,
+    },
+    textoPestanaActiva: {
+      ...tipografia.chico,
+      color: colores.textoSobrePrimario,
+    },
+    tituloSlot: {
+      ...tipografia.chico,
+      color: colores.textoSuave,
+      marginTop: espaciado.sm,
+      marginBottom: espaciado.xs,
+    },
+    fila: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: espaciado.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colores.borde,
+      gap: espaciado.sm,
+    },
+    filaActiva: {
+      backgroundColor: colores.primarioSuave,
+      borderRadius: radios.sm,
+    },
+    emoji: {
+      fontSize: 26,
+    },
+    boton: {
+      paddingVertical: espaciado.xs,
+      paddingHorizontal: espaciado.sm,
+      borderRadius: radios.sm,
+    },
+    botonActivo: {
+      backgroundColor: colores.primario,
+    },
+    botonSecundario: {
+      borderWidth: 1.5,
+      borderColor: colores.primario,
+    },
+    botonDeshabilitado: {
+      borderWidth: 1.5,
+      borderColor: colores.borde,
+    },
+    textoBotonActivo: {
+      color: colores.textoSobrePrimario,
+    },
+    textoBotonSecundario: {
+      color: colores.primario,
+    },
+    textoBotonDeshabilitado: {
+      color: colores.textoSuave,
+    },
+    cerrar: {
+      marginTop: espaciado.md,
+      alignItems: 'center',
+    },
+  });
+}

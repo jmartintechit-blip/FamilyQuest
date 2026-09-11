@@ -1,8 +1,10 @@
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming } from 'react-native-reanimated';
-import { colores, tipografia, espaciado, radios } from '../theme';
+import { useTema } from '../context/TemaContext';
 
 export default function TareaItem({ tarea, onMarcar }) {
+  const { colores, tipografia, espaciado, radios } = useTema();
+  const estilos = crearEstilos(colores, tipografia, espaciado, radios);
   const escala = useSharedValue(1);
   const esPositiva = tarea.tipo === 'positiva';
 
@@ -28,29 +30,31 @@ export default function TareaItem({ tarea, onMarcar }) {
   );
 }
 
-const estilos = StyleSheet.create({
-  fila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: espaciado.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colores.borde,
-  },
-  icono: {
-    fontSize: 20,
-    marginRight: espaciado.sm,
-  },
-  nombre: {
-    flex: 1,
-  },
-  boton: {
-    backgroundColor: colores.primarioSuave,
-    borderRadius: radios.sm,
-    paddingVertical: espaciado.xs,
-    paddingHorizontal: espaciado.sm,
-  },
-  textoBoton: {
-    ...tipografia.chico,
-    color: colores.primarioOscuro,
-  },
-});
+function crearEstilos(colores, tipografia, espaciado, radios) {
+  return StyleSheet.create({
+    fila: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: espaciado.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colores.borde,
+    },
+    icono: {
+      fontSize: 20,
+      marginRight: espaciado.sm,
+    },
+    nombre: {
+      flex: 1,
+    },
+    boton: {
+      backgroundColor: colores.primarioSuave,
+      borderRadius: radios.sm,
+      paddingVertical: espaciado.xs,
+      paddingHorizontal: espaciado.sm,
+    },
+    textoBoton: {
+      ...tipografia.chico,
+      color: colores.primarioOscuro,
+    },
+  });
+}

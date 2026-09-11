@@ -45,6 +45,24 @@ async function enviarPushNotificaciones(tokens, titulo, cuerpo) {
   }
 }
 
+const SEMANA_EN_MS = 7 * 24 * 60 * 60 * 1000;
+
+// El ranking se reinicia cada semana. No hay un cron corriendo en segundo
+// plano: en su lugar, cada vez que se toca a una familia comprobamos si ya
+// tocaba reiniciar (perezoso, pero suficiente para el tamaño de esta app).
+function revisarResetRanking(familiaId) {
+  const familia = db.prepare('SELECT ranking_ultimo_reset FROM familias WHERE id = ?').get(familiaId);
+  if (!familia) return;
+
+  const ultimoReset = new Date(familia.ranking_ultimo_reset.replace(' ', 'T') + 'Z');
+  const haPasadoUnaSemana = Date.now() - ultimoReset.getTime() >= SEMANA_EN_MS;
+
+  if (haPasadoUnaSemana) {
+    db.prepare('UPDATE usuarios SET puntos_totales = 0 WHERE familia_id = ?').run(familiaId);
+    db.prepare('UPDATE familias SET ranking_ultimo_reset = CURRENT_TIMESTAMP WHERE id = ?').run(familiaId);
+  }
+}
+
 const app = express();
 const servidor = http.createServer(app);
 const io = new Server(servidor, {
@@ -212,6 +230,8 @@ app.post('/eventos', verificarToken, (req, res) => {
     return res.status(404).json({ error: 'Usuario no encontrado' });
   }
 
+  if (usuario.familia_id) revisarResetRanking(usuario.familia_id);
+
   const insertarEvento = db.prepare(
     'INSERT INTO eventos (usuario_id, tarea_id, puntos_aplicados, registrado_por) VALUES (?, ?, ?, ?)'
   );
@@ -271,6 +291,7 @@ app.put('/usuarios/push-token', verificarToken, (req, res) => {
 
 app.get('/familias/:id/ranking', (req, res) => {
   const { id } = req.params;
+  revisarResetRanking(id);
   const ranking = db.prepare(
     'SELECT nombre, puntos_totales FROM usuarios WHERE familia_id = ? ORDER BY puntos_totales DESC'
   ).all(id);
@@ -279,6 +300,7 @@ app.get('/familias/:id/ranking', (req, res) => {
 
 app.get('/familias/:id', (req, res) => {
   const { id } = req.params;
+  revisarResetRanking(id);
   const familia = db.prepare('SELECT * FROM familias WHERE id = ?').get(id);
 
   if (!familia) {

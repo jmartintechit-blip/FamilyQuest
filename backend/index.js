@@ -25,6 +25,26 @@ function verificarToken(req, res, next) {
   }
 }
 
+// Envía notificaciones push a través del servicio de Expo. Si algún token no
+// es válido o el envío falla, simplemente lo registramos en consola: nunca
+// debe romper la petición que la disparó (marcar una tarea, etc.).
+async function enviarPushNotificaciones(tokens, titulo, cuerpo) {
+  const tokensValidos = tokens.filter(Boolean);
+  if (tokensValidos.length === 0) return;
+
+  try {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(
+        tokensValidos.map((token) => ({ to: token, title: titulo, body: cuerpo }))
+      ),
+    });
+  } catch (error) {
+    console.log('No se pudieron enviar las notificaciones push', error.message);
+  }
+}
+
 const app = express();
 const servidor = http.createServer(app);
 const io = new Server(servidor, {
@@ -154,8 +174,25 @@ app.post('/tareas', verificarToken, (req, res) => {
 
 app.get('/familias/:id/tareas', (req, res) => {
   const { id } = req.params;
-  const tareas = db.prepare('SELECT * FROM tareas WHERE familia_id = ?').all(id);
+  const tareas = db.prepare('SELECT * FROM tareas WHERE familia_id = ? ORDER BY tipo DESC, id DESC').all(id);
   res.json(tareas);
+});
+
+app.delete('/tareas/:id', verificarToken, (req, res) => {
+  const { id } = req.params;
+
+  const tarea = db.prepare('SELECT * FROM tareas WHERE id = ?').get(id);
+  if (!tarea) {
+    return res.status(404).json({ error: 'Tarea no encontrada' });
+  }
+
+  const usuario = db.prepare('SELECT familia_id FROM usuarios WHERE id = ?').get(req.usuario.id);
+  if (!usuario || usuario.familia_id !== tarea.familia_id) {
+    return res.status(403).json({ error: 'Esta tarea no pertenece a tu familia' });
+  }
+
+  db.prepare('DELETE FROM tareas WHERE id = ?').run(id);
+  res.json({ mensaje: 'Tarea eliminada' });
 });
 
 app.post('/eventos', verificarToken, (req, res) => {
@@ -202,6 +239,34 @@ app.post('/eventos', verificarToken, (req, res) => {
     id: resultado.lastInsertRowid,
     mensaje: `${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos aplicados a ${usuario.nombre}`
   });
+
+  // Avisamos al resto de la familia (no a quien acaba de hacer la tarea).
+  // Va después de responder: si el envío de push tarda o falla, no afecta
+  // a la app de quien marcó la tarea.
+  const otrosMiembros = db.prepare(
+    'SELECT push_token FROM usuarios WHERE familia_id = ? AND id != ?'
+  ).all(usuario.familia_id, usuario_id);
+
+  enviarPushNotificaciones(
+    otrosMiembros.map((m) => m.push_token),
+    esteEmojiSegunTipo(tarea.tipo) + ' ' + usuario.nombre,
+    `${tarea.nombre} (${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos)`
+  );
+});
+
+function esteEmojiSegunTipo(tipo) {
+  return tipo === 'positiva' ? '🌱' : '🥀';
+}
+
+app.put('/usuarios/push-token', verificarToken, (req, res) => {
+  const { push_token } = req.body;
+
+  if (!push_token) {
+    return res.status(400).json({ error: 'push_token es obligatorio' });
+  }
+
+  db.prepare('UPDATE usuarios SET push_token = ? WHERE id = ?').run(push_token, req.usuario.id);
+  res.json({ mensaje: 'Token guardado' });
 });
 
 app.get('/familias/:id/ranking', (req, res) => {

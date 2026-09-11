@@ -1,6 +1,9 @@
+import { useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useTema } from '../context/TemaContext';
+import { useAuth } from '../context/AuthContext';
+import { registrarPushToken, programarRecordatorioMascota } from '../utils/notificaciones';
 import InicioScreen from '../screens/InicioScreen';
 import RankingScreen from '../screens/RankingScreen';
 import ChatScreen from '../screens/ChatScreen';
@@ -17,6 +20,15 @@ const ICONOS = {
 
 export default function TabsPrincipales() {
   const { colores, fuentes } = useTema();
+  const { token } = useAuth();
+
+  // Se ejecuta una vez al entrar a la app con familia: pide permiso, intenta
+  // registrar el push token (silenciosamente si falla) y programa el
+  // recordatorio recurrente de la mascota.
+  useEffect(() => {
+    registrarPushToken(token);
+    programarRecordatorioMascota();
+  }, []);
 
   return (
     <Tab.Navigator

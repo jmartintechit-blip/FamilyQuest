@@ -126,4 +126,11 @@ try {
   // La columna ya existe, no pasa nada
 }
 
+try {
+  // Token de Expo Push Notifications del dispositivo del usuario, para poder avisarle en tiempo real
+  db.exec(`ALTER TABLE usuarios ADD COLUMN push_token TEXT`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
 module.exports = db;

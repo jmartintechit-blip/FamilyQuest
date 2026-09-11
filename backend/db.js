@@ -112,4 +112,18 @@ try {
   // La columna ya existe, no pasa nada
 }
 
+try {
+  // Complementos (sombrero, gafas, cuello...) que la familia ya desbloqueó, como JSON: '["gorro_fiesta"]'
+  db.exec(`ALTER TABLE familias ADD COLUMN cosmeticos_desbloqueados TEXT DEFAULT '[]'`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
+try {
+  // Qué complemento lleva puesto en cada categoría, como JSON: '{"sombrero":"corona"}'
+  db.exec(`ALTER TABLE familias ADD COLUMN cosmeticos_equipados TEXT DEFAULT '{}'`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
 module.exports = db;

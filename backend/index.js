@@ -44,6 +44,17 @@ const ESPECIES_MASCOTA = {
   conejo: { costo: 160 },
 };
 
+// Catálogo de complementos: cada uno pertenece a una categoría ("slot") y
+// solo puede haber uno equipado por categoría a la vez.
+const COSMETICOS_MASCOTA = {
+  gorro_fiesta: { slot: 'sombrero', costo: 30 },
+  corona: { slot: 'sombrero', costo: 90 },
+  gafas_sol: { slot: 'gafas', costo: 50 },
+  gafas_pasta: { slot: 'gafas', costo: 50 },
+  pajarita: { slot: 'cuello', costo: 30 },
+  bufanda: { slot: 'cuello', costo: 60 },
+};
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
@@ -275,6 +286,81 @@ app.post('/familias/:id/desbloquear', verificarToken, (req, res) => {
   res.json({
     especie_mascota: especie,
     especies_desbloqueadas: nuevasDesbloqueadas,
+    monedas: familia.monedas - definicion.costo,
+  });
+});
+
+app.get('/cosmeticos-mascota', (req, res) => {
+  res.json(COSMETICOS_MASCOTA);
+});
+
+app.put('/familias/:id/cosmeticos', verificarToken, (req, res) => {
+  const { id } = req.params;
+  const { slot, cosmetico } = req.body;
+
+  if (!slot) {
+    return res.status(400).json({ error: 'Falta la categoría del complemento' });
+  }
+
+  const familia = db.prepare('SELECT * FROM familias WHERE id = ?').get(id);
+  if (!familia) {
+    return res.status(404).json({ error: 'Familia no encontrada' });
+  }
+
+  // cosmetico = null quita lo que hubiera puesto en esa categoría
+  if (cosmetico !== null) {
+    const definicion = COSMETICOS_MASCOTA[cosmetico];
+    if (!definicion || definicion.slot !== slot) {
+      return res.status(400).json({ error: 'Complemento no válido para esa categoría' });
+    }
+
+    const desbloqueados = JSON.parse(familia.cosmeticos_desbloqueados || '[]');
+    if (!desbloqueados.includes(cosmetico)) {
+      return res.status(403).json({ error: 'Todavía no has desbloqueado ese complemento' });
+    }
+  }
+
+  const equipados = JSON.parse(familia.cosmeticos_equipados || '{}');
+  equipados[slot] = cosmetico;
+
+  db.prepare('UPDATE familias SET cosmeticos_equipados = ? WHERE id = ?').run(JSON.stringify(equipados), id);
+
+  res.json({ cosmeticos_equipados: equipados });
+});
+
+app.post('/familias/:id/desbloquear-cosmetico', verificarToken, (req, res) => {
+  const { id } = req.params;
+  const { cosmetico } = req.body;
+
+  const definicion = COSMETICOS_MASCOTA[cosmetico];
+  if (!definicion) {
+    return res.status(400).json({ error: 'Complemento no válido' });
+  }
+
+  const familia = db.prepare('SELECT * FROM familias WHERE id = ?').get(id);
+  if (!familia) {
+    return res.status(404).json({ error: 'Familia no encontrada' });
+  }
+
+  const desbloqueados = JSON.parse(familia.cosmeticos_desbloqueados || '[]');
+  if (desbloqueados.includes(cosmetico)) {
+    return res.status(409).json({ error: 'Ese complemento ya está desbloqueado' });
+  }
+
+  if (familia.monedas < definicion.costo) {
+    return res.status(400).json({ error: 'No tienes monedas suficientes' });
+  }
+
+  const nuevosDesbloqueados = [...desbloqueados, cosmetico];
+  const equipados = JSON.parse(familia.cosmeticos_equipados || '{}');
+  equipados[definicion.slot] = cosmetico;
+
+  db.prepare('UPDATE familias SET monedas = monedas - ?, cosmeticos_desbloqueados = ?, cosmeticos_equipados = ? WHERE id = ?')
+    .run(definicion.costo, JSON.stringify(nuevosDesbloqueados), JSON.stringify(equipados), id);
+
+  res.json({
+    cosmeticos_desbloqueados: nuevosDesbloqueados,
+    cosmeticos_equipados: equipados,
     monedas: familia.monedas - definicion.costo,
   });
 });

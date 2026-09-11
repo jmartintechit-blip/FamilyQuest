@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Share } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../context/AuthContext';
 import { useTema } from '../context/TemaContext';
 import { URL_BASE } from '../constants/config';
@@ -12,6 +14,24 @@ const OPCIONES_MODO = [
   { valor: 'sistema', etiqueta: 'Automático' },
   { valor: 'claro', etiqueta: 'Claro' },
   { valor: 'oscuro', etiqueta: 'Oscuro' },
+];
+
+const AYUDA = [
+  {
+    icono: 'paw-outline',
+    titulo: 'La mascota',
+    texto: 'Su salud sube cuando alguien de la familia completa tareas positivas, y baja con las negativas. Cuidadla entre todos.',
+  },
+  {
+    icono: 'logo-bitcoin',
+    titulo: 'Monedas',
+    texto: 'Se ganan igual que los puntos (suben y bajan con las tareas) y son compartidas por toda la familia. Sirven para desbloquear especies y complementos nuevos para la mascota.',
+  },
+  {
+    icono: 'trophy-outline',
+    titulo: 'Ranking',
+    texto: 'Se reinicia cada semana para que siempre haya una competición fresca. Las monedas y la mascota no se ven afectadas por el reinicio.',
+  },
 ];
 
 function SelectorSegmentado({ opciones, valorActual, onCambiar, colores, tipografia, espaciado, radios }) {
@@ -93,6 +113,21 @@ export default function AjustesScreen() {
     }, [usuario.familia_id])
   );
 
+  async function copiarCodigo() {
+    await Clipboard.setStringAsync(familia.codigo_invitacion);
+    Alert.alert('Copiado', 'El código de invitación se copió al portapapeles');
+  }
+
+  async function compartirCodigo() {
+    try {
+      await Share.share({
+        message: `Únete a nuestra familia en FamilyQuest con el código ${familia.codigo_invitacion}`,
+      });
+    } catch (error) {
+      console.log('Error compartiendo el código', error);
+    }
+  }
+
   function confirmarSalirDeFamilia() {
     Alert.alert(
       '¿Salir de la familia?',
@@ -165,8 +200,18 @@ export default function AjustesScreen() {
           <>
             <Text style={tipografia.cuerpo}>{familia.nombre}</Text>
             <View style={styles.filaCodigo}>
-              <Text style={tipografia.cuerpoSuave}>Código de invitación</Text>
-              <Text style={styles.codigo}>{familia.codigo_invitacion}</Text>
+              <View>
+                <Text style={tipografia.cuerpoSuave}>Código de invitación</Text>
+                <Text style={styles.codigo}>{familia.codigo_invitacion}</Text>
+              </View>
+              <View style={styles.filaBotonesCodigo}>
+                <TouchableOpacity onPress={copiarCodigo} style={styles.botonIcono}>
+                  <Ionicons name="copy-outline" size={20} color={colores.primario} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={compartirCodigo} style={styles.botonIcono}>
+                  <Ionicons name="share-social-outline" size={20} color={colores.primario} />
+                </TouchableOpacity>
+              </View>
             </View>
           </>
         )}
@@ -181,6 +226,19 @@ export default function AjustesScreen() {
               {miembro.id === usuario.id ? ' (tú)' : ''}
             </Text>
             <Text style={styles.puntosMiembro}>{miembro.puntos_totales} pts</Text>
+          </View>
+        ))}
+      </Tarjeta>
+
+      <Tarjeta>
+        <Text style={[tipografia.subtitulo, { marginBottom: espaciado.sm }]}>Cómo funciona</Text>
+        {AYUDA.map((item, indice) => (
+          <View key={item.titulo} style={[styles.filaAyuda, indice === AYUDA.length - 1 && { borderBottomWidth: 0 }]}>
+            <Ionicons name={item.icono} size={22} color={colores.primario} style={styles.iconoAyuda} />
+            <View style={{ flex: 1 }}>
+              <Text style={tipografia.cuerpo}>{item.titulo}</Text>
+              <Text style={[tipografia.chico, { marginTop: 2 }]}>{item.texto}</Text>
+            </View>
           </View>
         ))}
       </Tarjeta>
@@ -206,6 +264,15 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       borderTopWidth: 1,
       borderTopColor: colores.borde,
     },
+    filaBotonesCodigo: {
+      flexDirection: 'row',
+      gap: espaciado.sm,
+    },
+    botonIcono: {
+      padding: espaciado.xs,
+      backgroundColor: colores.primarioSuave,
+      borderRadius: radios.sm,
+    },
     codigo: {
       ...tipografia.subtitulo,
       color: colores.primarioOscuro,
@@ -219,6 +286,16 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
     puntosMiembro: {
       ...tipografia.cuerpo,
       color: colores.textoSuave,
+    },
+    filaAyuda: {
+      flexDirection: 'row',
+      paddingVertical: espaciado.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colores.borde,
+      gap: espaciado.sm,
+    },
+    iconoAyuda: {
+      marginTop: 2,
     },
   });
 }

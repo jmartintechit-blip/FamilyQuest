@@ -133,4 +133,14 @@ try {
   // La columna ya existe, no pasa nada
 }
 
+try {
+  // Fecha del último reinicio semanal del ranking de puntos de esta familia.
+  // SQLite no permite CURRENT_TIMESTAMP como default en ALTER TABLE (solo
+  // valores constantes) — se usa una fecha fija en el pasado, que hace que
+  // la primera comprobación dispare un reinicio inicial (inofensivo).
+  db.exec(`ALTER TABLE familias ADD COLUMN ranking_ultimo_reset TEXT DEFAULT '2024-01-01 00:00:00'`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
 module.exports = db;

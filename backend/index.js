@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const cors = require('cors');
 const { Server } = require('socket.io');
 const db = require('./db');
 const bcrypt = require('bcrypt');
@@ -32,7 +33,8 @@ const io = new Server(servidor, {
 
 const PUERTO = 3000;
 
-app.use(express.json()); 
+app.use(cors());
+app.use(express.json());
 app.use(express.static('public'));
 
 app.get('/', (req, res) => {
@@ -176,6 +178,25 @@ app.get('/familias/:id', (req, res) => {
   }
 
   res.json(familia);
+});
+
+app.put('/familias/:id/mascota', verificarToken, (req, res) => {
+  const { id } = req.params;
+  const { nombre_mascota } = req.body;
+
+  if (!nombre_mascota || !nombre_mascota.trim()) {
+    return res.status(400).json({ error: 'El nombre de la mascota es obligatorio' });
+  }
+
+  const nombreLimpio = nombre_mascota.trim().slice(0, 20);
+
+  const resultado = db.prepare('UPDATE familias SET nombre_mascota = ? WHERE id = ?').run(nombreLimpio, id);
+
+  if (resultado.changes === 0) {
+    return res.status(404).json({ error: 'Familia no encontrada' });
+  }
+
+  res.json({ nombre_mascota: nombreLimpio });
 });
 
 app.post('/mensajes', verificarToken, (req, res) => {

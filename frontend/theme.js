@@ -3,39 +3,42 @@
 // se toca este archivo y no cada pantalla por separado.
 
 export const colores = {
-  // Fondo general: crema cálido, no blanco puro (menos "clínico")
-  fondo: '#FBF6EC',
+  // Fondo general: blanco roto con un toque frío, para una sensación más
+  // "limpia" que el crema cálido anterior (que leía un poco vintage/rústico)
+  fondo: '#F6FAF7',
   // Superficie de tarjetas y inputs
   superficie: '#FFFFFF',
-  superficieSuave: '#F3EEE1',
+  superficieSuave: '#EEF4F0',
 
-  // Verde salvia: color principal de acciones (botones, links activos)
-  primario: '#5B8C5A',
-  primarioOscuro: '#3F6B40',
-  primarioSuave: '#DCEBDA',
+  // Verde más vivo y saturado que antes — menos "salvia apagada", más fresco
+  primario: '#2FA35D',
+  primarioOscuro: '#1F7A45',
+  primarioSuave: '#DBF3E3',
 
-  // Terracota: color de acento para destacar puntos, alertas suaves
-  acento: '#D98A4E',
-  acentoSuave: '#F5DFC7',
+  // Coral cálido: color de acento para destacar puntos, alertas suaves
+  acento: '#FF8A65',
+  acentoSuave: '#FFE4D9',
 
   // Dorado/miel: reservado para el "modo caos" (eventos especiales tipo Hora Dorada)
-  dorado: '#E3A83B',
-  doradoSuave: '#FBEBC9',
-  doradoOscuro: '#96701F',
+  dorado: '#FFC94D',
+  doradoSuave: '#FFF3D6',
+  doradoOscuro: '#8A5A00',
 
-  // Textos: marrón oscuro cálido en vez de negro puro
-  texto: '#3A342C',
-  textoSuave: '#7A7266',
+  // Textos: gris muy oscuro neutro (ni negro puro ni marrón cálido)
+  texto: '#2B2E2C',
+  textoSuave: '#767F7A',
   textoSobrePrimario: '#FFFFFF',
 
-  borde: '#E6DCC8',
-  error: '#C0524A',
-  errorSuave: '#F6DEDB',
+  borde: '#E1E8E3',
+  error: '#E0574F',
+  errorSuave: '#FCE4E1',
 
   // Gradiente continuo de salud de la mascota (0 -> 50 -> 100), usado con
   // interpolateColor para que el color cambie de forma gradual, no a saltos.
-  mascotaGradiente: ['#B85C4A', '#D9A45C', '#6FA96B'],
-  mascotaGlow: '#FFE9A8',
+  // Ahora usa colores mucho más vivos y saturados en vez de tonos apagados.
+  mascotaGradiente: ['#F2765C', '#FFC94D', '#2FA35D'],
+  mascotaGlow: '#FFF3D6',
+  mascotaMofletes: '#FF9E8F',
 };
 
 // Nombres de fuente de @expo-google-fonts/nunito. Se cargan de forma async

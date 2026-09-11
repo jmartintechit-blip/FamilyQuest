@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { colores } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import { useTema } from '../context/TemaContext';
 import AuthScreen from '../screens/AuthScreen';
 import FamiliaSetupScreen from '../screens/FamiliaSetupScreen';
 import SinFamiliaScreen from '../screens/SinFamiliaScreen';
@@ -11,6 +11,7 @@ import TabsPrincipales from './TabsPrincipales';
 // cargando -> sin sesión -> sin familia -> app completa (con pestañas).
 export default function RaizNavegacion() {
   const { usuario, cargandoSesion } = useAuth();
+  const { colores } = useTema();
   const [saltarFamilia, setSaltarFamilia] = useState(false);
 
   if (cargandoSesion) {

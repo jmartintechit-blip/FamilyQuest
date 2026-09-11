@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
-import { colores, tipografia, espaciado } from '../theme';
 import { URL_BASE } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
+import { useTema } from '../context/TemaContext';
 import BotonPrincipal from '../components/BotonPrincipal';
 import CampoTexto from '../components/CampoTexto';
 
 export default function AuthScreen() {
   const { guardarSesion } = useAuth();
+  const { colores, tipografia, espaciado } = useTema();
+  const styles = crearEstilos(colores, tipografia, espaciado);
   const [modoRegistro, setModoRegistro] = useState(false);
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -98,16 +100,18 @@ export default function AuthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colores.fondo,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: espaciado.lg,
-  },
-  enlace: {
-    ...tipografia.cuerpo,
-    color: colores.primario,
-  },
-});
+function crearEstilos(colores, tipografia, espaciado) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colores.fondo,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: espaciado.lg,
+    },
+    enlace: {
+      ...tipografia.cuerpo,
+      color: colores.primario,
+    },
+  });
+}

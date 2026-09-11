@@ -1,9 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colores, tipografia, espaciado, radios } from '../theme';
+import { useTema } from '../context/TemaContext';
 
 const MEDALLAS = ['🥇', '🥈', '🥉'];
 
 export default function RankingLista({ ranking }) {
+  const { colores, tipografia, espaciado, radios } = useTema();
+  const estilos = crearEstilos(colores, tipografia, espaciado, radios);
   const maximo = Math.max(1, ...ranking.map((p) => p.puntos_totales));
 
   return (
@@ -31,37 +33,39 @@ export default function RankingLista({ ranking }) {
   );
 }
 
-const estilos = StyleSheet.create({
-  fila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: espaciado.sm,
-  },
-  posicion: {
-    fontSize: 20,
-    width: 36,
-    textAlign: 'center',
-  },
-  info: {
-    flex: 1,
-    marginHorizontal: espaciado.sm,
-  },
-  barraFondo: {
-    height: 6,
-    borderRadius: radios.completo,
-    backgroundColor: colores.superficieSuave,
-    marginTop: espaciado.xs,
-    overflow: 'hidden',
-  },
-  barraRelleno: {
-    height: '100%',
-    borderRadius: radios.completo,
-    backgroundColor: colores.primario,
-  },
-  puntos: {
-    ...tipografia.subtitulo,
-    color: colores.primarioOscuro,
-    minWidth: 40,
-    textAlign: 'right',
-  },
-});
+function crearEstilos(colores, tipografia, espaciado, radios) {
+  return StyleSheet.create({
+    fila: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: espaciado.sm,
+    },
+    posicion: {
+      fontSize: 20,
+      width: 36,
+      textAlign: 'center',
+    },
+    info: {
+      flex: 1,
+      marginHorizontal: espaciado.sm,
+    },
+    barraFondo: {
+      height: 6,
+      borderRadius: radios.completo,
+      backgroundColor: colores.superficieSuave,
+      marginTop: espaciado.xs,
+      overflow: 'hidden',
+    },
+    barraRelleno: {
+      height: '100%',
+      borderRadius: radios.completo,
+      backgroundColor: colores.primario,
+    },
+    puntos: {
+      ...tipografia.subtitulo,
+      color: colores.primarioOscuro,
+      minWidth: 40,
+      textAlign: 'right',
+    },
+  });
+}

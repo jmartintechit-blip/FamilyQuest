@@ -92,4 +92,24 @@ try {
   // La columna ya existe, no pasa nada
 }
 
+try {
+  db.exec(`ALTER TABLE familias ADD COLUMN especie_mascota TEXT DEFAULT 'manzana'`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
+try {
+  // Lista de especies que la familia ya desbloqueó, guardada como JSON (ej. '["manzana","oso"]')
+  db.exec(`ALTER TABLE familias ADD COLUMN especies_desbloqueadas TEXT DEFAULT '["manzana"]'`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
+try {
+  // Monedas compartidas por toda la familia (no por usuario) para desbloquear especies de mascota
+  db.exec(`ALTER TABLE familias ADD COLUMN monedas INTEGER DEFAULT 0`);
+} catch (error) {
+  // La columna ya existe, no pasa nada
+}
+
 module.exports = db;

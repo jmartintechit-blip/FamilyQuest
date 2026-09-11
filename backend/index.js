@@ -33,6 +33,17 @@ const io = new Server(servidor, {
 
 const PUERTO = 3000;
 
+// Catálogo de especies de mascota disponibles y su coste en monedas para
+// desbloquearlas. "manzana" es la especie inicial, gratis para toda familia.
+const ESPECIES_MASCOTA = {
+  manzana: { costo: 0 },
+  oso: { costo: 40 },
+  capibara: { costo: 70 },
+  zorro: { costo: 100 },
+  panda: { costo: 130 },
+  conejo: { costo: 160 },
+};
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
@@ -150,10 +161,17 @@ app.post('/eventos', verificarToken, (req, res) => {
   const cambioSalud = tarea.tipo === 'positiva' ? 3 : -5;
 
   db.prepare(`
-    UPDATE familias 
-    SET salud_mascota = MAX(0, MIN(100, salud_mascota + ?)) 
+    UPDATE familias
+    SET salud_mascota = MAX(0, MIN(100, salud_mascota + ?))
     WHERE id = (SELECT familia_id FROM usuarios WHERE id = ?)
   `).run(cambioSalud, usuario_id);
+
+  // Las monedas compartidas suben y bajan igual que los puntos (nunca por debajo de 0)
+  db.prepare(`
+    UPDATE familias
+    SET monedas = MAX(0, monedas + ?)
+    WHERE id = (SELECT familia_id FROM usuarios WHERE id = ?)
+  `).run(tarea.puntos_valor, usuario_id);
 
   res.status(201).json({
     id: resultado.lastInsertRowid,
@@ -197,6 +215,68 @@ app.put('/familias/:id/mascota', verificarToken, (req, res) => {
   }
 
   res.json({ nombre_mascota: nombreLimpio });
+});
+
+app.get('/especies-mascota', (req, res) => {
+  res.json(ESPECIES_MASCOTA);
+});
+
+app.put('/familias/:id/especie', verificarToken, (req, res) => {
+  const { id } = req.params;
+  const { especie } = req.body;
+
+  if (!ESPECIES_MASCOTA[especie]) {
+    return res.status(400).json({ error: 'Especie no válida' });
+  }
+
+  const familia = db.prepare('SELECT * FROM familias WHERE id = ?').get(id);
+  if (!familia) {
+    return res.status(404).json({ error: 'Familia no encontrada' });
+  }
+
+  const desbloqueadas = JSON.parse(familia.especies_desbloqueadas || '["manzana"]');
+  if (!desbloqueadas.includes(especie)) {
+    return res.status(403).json({ error: 'Todavía no has desbloqueado esa especie' });
+  }
+
+  db.prepare('UPDATE familias SET especie_mascota = ? WHERE id = ?').run(especie, id);
+
+  res.json({ especie_mascota: especie });
+});
+
+app.post('/familias/:id/desbloquear', verificarToken, (req, res) => {
+  const { id } = req.params;
+  const { especie } = req.body;
+
+  const definicion = ESPECIES_MASCOTA[especie];
+  if (!definicion) {
+    return res.status(400).json({ error: 'Especie no válida' });
+  }
+
+  const familia = db.prepare('SELECT * FROM familias WHERE id = ?').get(id);
+  if (!familia) {
+    return res.status(404).json({ error: 'Familia no encontrada' });
+  }
+
+  const desbloqueadas = JSON.parse(familia.especies_desbloqueadas || '["manzana"]');
+  if (desbloqueadas.includes(especie)) {
+    return res.status(409).json({ error: 'Esa especie ya está desbloqueada' });
+  }
+
+  if (familia.monedas < definicion.costo) {
+    return res.status(400).json({ error: 'No tienes monedas suficientes' });
+  }
+
+  const nuevasDesbloqueadas = [...desbloqueadas, especie];
+
+  db.prepare('UPDATE familias SET monedas = monedas - ?, especies_desbloqueadas = ?, especie_mascota = ? WHERE id = ?')
+    .run(definicion.costo, JSON.stringify(nuevasDesbloqueadas), especie, id);
+
+  res.json({
+    especie_mascota: especie,
+    especies_desbloqueadas: nuevasDesbloqueadas,
+    monedas: familia.monedas - definicion.costo,
+  });
 });
 
 app.post('/mensajes', verificarToken, (req, res) => {

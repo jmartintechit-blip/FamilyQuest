@@ -6,6 +6,7 @@ import { URL_BASE } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
 import Tarjeta from '../components/Tarjeta';
 import MascotaHero from '../components/mascota/MascotaHero';
+import SelectorMascota from '../components/mascota/SelectorMascota';
 import BannerEvento from '../components/BannerEvento';
 import TareaItem from '../components/TareaItem';
 import CampoTexto from '../components/CampoTexto';
@@ -24,10 +25,15 @@ export default function InicioScreen() {
   const [tareas, setTareas] = useState([]);
   const [saludMascota, setSaludMascota] = useState(100);
   const [nombreMascota, setNombreMascota] = useState('Brote');
+  const [especieMascota, setEspecieMascota] = useState('manzana');
+  const [especiesDesbloqueadas, setEspeciesDesbloqueadas] = useState(['manzana']);
+  const [monedas, setMonedas] = useState(0);
+  const [catalogoEspecies, setCatalogoEspecies] = useState(null);
   const [puntosFlotantes, setPuntosFlotantes] = useState([]);
   const [eventoActivo, setEventoActivo] = useState(null);
   const [modalNombreVisible, setModalNombreVisible] = useState(false);
   const [nombreEnEdicion, setNombreEnEdicion] = useState('');
+  const [selectorMascotaVisible, setSelectorMascotaVisible] = useState(false);
 
   async function cargarTareas() {
     try {
@@ -45,8 +51,25 @@ export default function InicioScreen() {
       const datos = await respuesta.json();
       setSaludMascota(datos.salud_mascota);
       setNombreMascota(datos.nombre_mascota || 'Brote');
+      setEspecieMascota(datos.especie_mascota || 'manzana');
+      setMonedas(datos.monedas || 0);
+      try {
+        setEspeciesDesbloqueadas(JSON.parse(datos.especies_desbloqueadas || '["manzana"]'));
+      } catch {
+        setEspeciesDesbloqueadas(['manzana']);
+      }
     } catch (error) {
       console.log('Error cargando familia', error);
+    }
+  }
+
+  async function cargarCatalogoEspecies() {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/especies-mascota`);
+      const datos = await respuesta.json();
+      setCatalogoEspecies(datos);
+    } catch (error) {
+      console.log('Error cargando catálogo de especies', error);
     }
   }
 
@@ -56,6 +79,7 @@ export default function InicioScreen() {
     useCallback(() => {
       cargarTareas();
       cargarFamilia();
+      cargarCatalogoEspecies();
     }, [usuario.familia_id])
   );
 
@@ -129,6 +153,59 @@ export default function InicioScreen() {
     }
   }
 
+  async function seleccionarEspecie(especie) {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/especie`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ especie }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      setEspecieMascota(datos.especie_mascota);
+      setSelectorMascotaVisible(false);
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo cambiar la mascota');
+    }
+  }
+
+  async function desbloquearEspecie(especie) {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/desbloquear`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ especie }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      setEspecieMascota(datos.especie_mascota);
+      setEspeciesDesbloqueadas(datos.especies_desbloqueadas);
+      setMonedas(datos.monedas);
+      setSelectorMascotaVisible(false);
+      Alert.alert('¡Desbloqueada!', '¡Ya tenéis una mascota nueva!');
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo desbloquear la mascota');
+    }
+  }
+
   // Demo del "modo caos": activa un evento de ejemplo unos segundos.
   // Sustituir por la lógica real en cuanto el backend genere estos eventos.
   function simularEventoEspecial() {
@@ -148,7 +225,13 @@ export default function InicioScreen() {
         puntosFlotantes={puntosFlotantes}
         nombre={nombreMascota}
         onPresionarNombre={abrirModalNombre}
+        especie={especieMascota}
       />
+
+      <TouchableOpacity onPress={() => setSelectorMascotaVisible(true)} style={styles.filaMonedas}>
+        <Text style={styles.textoMonedas}>🪙 {monedas} monedas</Text>
+        <Text style={styles.enlaceCambiar}>Cambiar mascota</Text>
+      </TouchableOpacity>
 
       <Tarjeta>
         <Text style={styles.seccion}>Tus tareas</Text>
@@ -177,6 +260,17 @@ export default function InicioScreen() {
           </View>
         </View>
       </Modal>
+
+      <SelectorMascota
+        visible={selectorMascotaVisible}
+        onClose={() => setSelectorMascotaVisible(false)}
+        especieActiva={especieMascota}
+        especiesDesbloqueadas={especiesDesbloqueadas}
+        costos={catalogoEspecies}
+        monedas={monedas}
+        onSeleccionar={seleccionarEspecie}
+        onDesbloquear={desbloquearEspecie}
+      />
     </ScrollView>
   );
 }
@@ -189,6 +283,21 @@ const styles = StyleSheet.create({
   seccion: {
     ...tipografia.subtitulo,
     marginBottom: espaciado.sm,
+  },
+  filaMonedas: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: espaciado.md,
+    paddingHorizontal: espaciado.xs,
+  },
+  textoMonedas: {
+    ...tipografia.cuerpo,
+    color: colores.doradoOscuro,
+  },
+  enlaceCambiar: {
+    ...tipografia.chico,
+    color: colores.primario,
   },
   enlaceDemo: {
     ...tipografia.chico,

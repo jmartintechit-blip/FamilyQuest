@@ -15,11 +15,16 @@ import Animated, {
   FadeOutUp,
 } from 'react-native-reanimated';
 import { colores, tipografia, fuentes, espaciado, radios } from '../../theme';
+import { ESPECIES, Orejas, Marcas } from './especies';
 
 // react-native-svg no anima sus props por sí solo: envolvemos las formas con
 // Reanimated para poder cambiar su "fill" o su "d" cuadro a cuadro.
 const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+// Color al que tiende CUALQUIER especie cuando está muy débil — la salud
+// "apaga" el color propio de la especie en vez de sustituirlo por otro.
+const COLOR_APAGADO = '#9E9689';
 
 function mensajePorSalud(salud) {
   if (salud >= 80) return '¡Estoy genial, gracias por cuidarme!';
@@ -31,8 +36,9 @@ function mensajePorSalud(salud) {
 // puntosFlotantes: [{ id, texto, color }] — mensajes tipo "+5" que aparecen
 // un instante sobre la mascota cuando se marca una tarea, y luego desaparecen.
 // nombre / onPresionarNombre: el nombre que le puso la familia a la mascota,
-// tocable para poder cambiarlo.
-export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPresionarNombre }) {
+// tocable para poder cambiarlo. especie: 'manzana' | 'oso' | 'capibara' | ...
+export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPresionarNombre, especie = 'manzana' }) {
+  const info = ESPECIES[especie] || ESPECIES.manzana;
   const saludAnimada = useSharedValue(salud);
   const respiracion = useSharedValue(0);
 
@@ -64,8 +70,10 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
     return { opacity: opacidad, transform: [{ scale: escalaGlow }] };
   });
 
-  const propsCuerpo = useAnimatedProps(() => ({
-    fill: interpolateColor(saludAnimada.value, [0, 50, 100], colores.mascotaGradiente),
+  // El color propio de la especie se "apaga" con una capa gris encima cuando
+  // la salud es baja, en vez de sustituirlo por un color que no le pertenece.
+  const propsApagado = useAnimatedProps(() => ({
+    opacity: interpolate(saludAnimada.value, [0, 100], [0.6, 0], Extrapolation.CLAMP),
   }));
 
   // Los mofletes solo se notan bien cuando está sano y contento.
@@ -101,16 +109,18 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
 
       <Animated.View style={estiloCuerpo}>
         <Svg width={180} height={180} viewBox="0 0 200 200">
-          {/* brote de hojas, más redondeado y con 3 hojitas */}
-          <Path d="M100,38 C93,15 68,8 56,18 C68,32 84,37 100,38 Z" fill={colores.primario} />
-          <Path d="M100,38 C107,15 132,8 144,18 C132,32 116,37 100,38 Z" fill={colores.primarioOscuro} />
-          <Path d="M100,34 C98,18 100,8 100,2 C102,8 104,18 100,34 Z" fill={colores.primarioOscuro} />
+          <Orejas especie={especie} colorCuerpo={info.colorCuerpo} colorOscuro={info.colorOscuro} />
 
           {/* cuerpo: óvalo ancho y redondeado = más "gordito" que un blob alargado */}
-          <AnimatedEllipse animatedProps={propsCuerpo} cx="100" cy="115" rx="78" ry="68" />
+          <Ellipse cx="100" cy="115" rx="78" ry="68" fill={info.colorCuerpo} />
+
+          {/* capa gris que se hace visible cuando la salud es baja ("apagado") */}
+          <AnimatedEllipse animatedProps={propsApagado} cx="100" cy="115" rx="78" ry="68" fill={COLOR_APAGADO} />
 
           {/* brillo superior para dar aspecto pulido/brillante, no plano */}
           <Ellipse cx="72" cy="80" rx="28" ry="16" fill="#FFFFFF" opacity={0.28} transform="rotate(-25 72 80)" />
+
+          <Marcas especie={especie} colorCuerpo={info.colorCuerpo} colorOscuro={info.colorOscuro} />
 
           {/* mofletes sonrosados */}
           <AnimatedEllipse animatedProps={propsMofletes} cx="58" cy="132" rx="14" ry="9" fill={colores.mascotaMofletes} />

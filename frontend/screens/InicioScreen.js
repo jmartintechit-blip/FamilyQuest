@@ -150,7 +150,7 @@ export default function InicioScreen() {
       if (tarea) {
         mostrarPuntoFlotante(tarea);
         const signo = tarea.puntos_valor > 0 ? '+' : '';
-        notificarLocalmente('¡Tarea completada! 🎉', `${tarea.nombre}: ${signo}${tarea.puntos_valor} puntos`);
+        notificarLocalmente('¡Tarea completada!', `${tarea.nombre}: ${signo}${tarea.puntos_valor} puntos`);
       }
       cargarFamilia();
     } catch (error) {
@@ -450,13 +450,23 @@ export default function InicioScreen() {
                 onPress={() => setTipoNuevaTarea('positiva')}
                 style={[styles.opcionTipo, tipoNuevaTarea === 'positiva' && styles.opcionTipoActiva]}
               >
-                <Text style={tipoNuevaTarea === 'positiva' ? styles.textoTipoActivo : styles.textoTipo}>🌱 Suma puntos</Text>
+                <Ionicons
+                  name="add-circle-outline"
+                  size={16}
+                  color={tipoNuevaTarea === 'positiva' ? colores.primarioOscuro : colores.textoSuave}
+                />
+                <Text style={tipoNuevaTarea === 'positiva' ? styles.textoTipoActivo : styles.textoTipo}> Suma puntos</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setTipoNuevaTarea('negativa')}
                 style={[styles.opcionTipo, tipoNuevaTarea === 'negativa' && styles.opcionTipoActiva]}
               >
-                <Text style={tipoNuevaTarea === 'negativa' ? styles.textoTipoActivo : styles.textoTipo}>🥀 Resta puntos</Text>
+                <Ionicons
+                  name="remove-circle-outline"
+                  size={16}
+                  color={tipoNuevaTarea === 'negativa' ? colores.primarioOscuro : colores.textoSuave}
+                />
+                <Text style={tipoNuevaTarea === 'negativa' ? styles.textoTipoActivo : styles.textoTipo}> Resta puntos</Text>
               </TouchableOpacity>
             </View>
             <CampoTexto
@@ -512,8 +522,10 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
     },
     opcionTipo: {
       flex: 1,
+      flexDirection: 'row',
       paddingVertical: espaciado.sm,
       alignItems: 'center',
+      justifyContent: 'center',
       borderRadius: radios.md,
       borderWidth: 1.5,
       borderColor: colores.borde,

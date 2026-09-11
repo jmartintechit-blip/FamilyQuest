@@ -31,7 +31,23 @@ Cada familia tiene su propio espacio privado, al que se accede creando una cuent
 
 ## Capturas
 
-*(Pendiente de añadir capturas de pantalla de la app en funcionamiento.)*
+*(Pendiente — coloca aquí capturas reales tomadas desde el móvil con Expo Go.)*
+
+Guarda las imágenes en `docs/screenshots/` con estos nombres y se mostrarán automáticamente:
+
+| Archivo | Pantalla |
+|---|---|
+| `docs/screenshots/inicio.png` | Inicio (mascota + tareas) |
+| `docs/screenshots/ranking.png` | Ranking |
+| `docs/screenshots/chat.png` | Chat |
+| `docs/screenshots/ajustes.png` | Ajustes |
+
+```markdown
+<img src="docs/screenshots/inicio.png" width="250" />
+<img src="docs/screenshots/ranking.png" width="250" />
+<img src="docs/screenshots/chat.png" width="250" />
+<img src="docs/screenshots/ajustes.png" width="250" />
+```
 
 ## Stack técnico
 

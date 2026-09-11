@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTema } from '../context/TemaContext';
 
-const MEDALLAS = ['🥇', '🥈', '🥉'];
+const COLORES_MEDALLA = ['#E3A83B', '#A8A8A8', '#B5793B'];
 
 export default function RankingLista({ ranking }) {
   const { colores, tipografia, espaciado, radios } = useTema();
@@ -12,7 +13,13 @@ export default function RankingLista({ ranking }) {
     <View>
       {ranking.map((persona, indice) => (
         <View key={indice} style={estilos.fila}>
-          <Text style={estilos.posicion}>{MEDALLAS[indice] ?? `${indice + 1}º`}</Text>
+          <View style={estilos.posicion}>
+            {indice < 3 ? (
+              <Ionicons name="medal" size={24} color={COLORES_MEDALLA[indice]} />
+            ) : (
+              <Text style={[tipografia.cuerpoSuave]}>{indice + 1}º</Text>
+            )}
+          </View>
 
           <View style={estilos.info}>
             <Text style={tipografia.cuerpo}>{persona.nombre}</Text>
@@ -41,9 +48,8 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       paddingVertical: espaciado.sm,
     },
     posicion: {
-      fontSize: 20,
       width: 36,
-      textAlign: 'center',
+      alignItems: 'center',
     },
     info: {
       flex: 1,

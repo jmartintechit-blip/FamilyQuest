@@ -70,12 +70,6 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
     return { transform: [{ scale: escala }, { rotate: `${inclinacion}deg` }] };
   });
 
-  const estiloGlow = useAnimatedStyle(() => {
-    const opacidad = interpolate(saludAnimada.value, [0, 50, 100], [0, 0.15, 0.6], Extrapolation.CLAMP);
-    const escalaGlow = 1 + respiracion.value * 0.06;
-    return { opacity: opacidad, transform: [{ scale: escalaGlow }] };
-  });
-
   // El color propio de la especie se "apaga" con una capa gris encima cuando
   // la salud es baja, en vez de sustituirlo por un color que no le pertenece.
   const propsApagadoCuerpo = useAnimatedProps(() => ({
@@ -103,8 +97,6 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
 
   return (
     <View style={estilos.contenedor}>
-      <Animated.View style={[estilos.glow, estiloGlow]} />
-
       {puntosFlotantes.map((p) => (
         <Animated.View
           key={p.id}
@@ -187,14 +179,6 @@ function crearEstilos(colores, tipografia, fuentes, espaciado, radios) {
     contenedor: {
       alignItems: 'center',
       paddingVertical: espaciado.lg,
-    },
-    glow: {
-      position: 'absolute',
-      top: espaciado.lg - 10,
-      width: 260,
-      height: 260,
-      borderRadius: 130,
-      backgroundColor: colorMascota.glow,
     },
     puntoFlotante: {
       position: 'absolute',

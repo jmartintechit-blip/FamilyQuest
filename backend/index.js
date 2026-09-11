@@ -93,6 +93,70 @@ const COSMETICOS_MASCOTA = {
   bufanda: { slot: 'cuello', costo: 60 },
 };
 
+// Catálogo de tareas domésticas que se le da a cada familia nueva, para que
+// no arranquen con la lista en blanco. Cada una se puede editar o borrar
+// después desde la app — esto es solo un punto de partida generoso.
+const TAREAS_PREDEFINIDAS = [
+  // --- Positivas: limpieza y orden ---
+  { nombre: 'Hacer la cama', puntos_valor: 3, tipo: 'positiva' },
+  { nombre: 'Lavar los platos', puntos_valor: 5, tipo: 'positiva' },
+  { nombre: 'Poner el lavavajillas', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Sacar la basura', puntos_valor: 3, tipo: 'positiva' },
+  { nombre: 'Sacar el reciclaje', puntos_valor: 3, tipo: 'positiva' },
+  { nombre: 'Poner una lavadora', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Tender la ropa', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Doblar y guardar la ropa', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Planchar la ropa', puntos_valor: 5, tipo: 'positiva' },
+  { nombre: 'Pasar la aspiradora', puntos_valor: 5, tipo: 'positiva' },
+  { nombre: 'Barrer el suelo', puntos_valor: 3, tipo: 'positiva' },
+  { nombre: 'Fregar el suelo', puntos_valor: 6, tipo: 'positiva' },
+  { nombre: 'Limpiar el baño', puntos_valor: 7, tipo: 'positiva' },
+  { nombre: 'Limpiar la cocina', puntos_valor: 6, tipo: 'positiva' },
+  { nombre: 'Quitar el polvo', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Cambiar las sábanas', puntos_valor: 5, tipo: 'positiva' },
+  { nombre: 'Ordenar la habitación', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Ordenar el salón', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Organizar el armario', puntos_valor: 5, tipo: 'positiva' },
+  { nombre: 'Limpiar los cristales', puntos_valor: 6, tipo: 'positiva' },
+  // --- Positivas: cocina y compra ---
+  { nombre: 'Poner la mesa', puntos_valor: 2, tipo: 'positiva' },
+  { nombre: 'Recoger la mesa', puntos_valor: 2, tipo: 'positiva' },
+  { nombre: 'Cocinar la comida', puntos_valor: 8, tipo: 'positiva' },
+  { nombre: 'Preparar la cena', puntos_valor: 8, tipo: 'positiva' },
+  { nombre: 'Preparar el desayuno', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Hacer la compra semanal', puntos_valor: 6, tipo: 'positiva' },
+  { nombre: 'Organizar la nevera', puntos_valor: 4, tipo: 'positiva' },
+  // --- Positivas: mascotas, plantas y exterior ---
+  { nombre: 'Pasear al perro', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Dar de comer a la mascota', puntos_valor: 3, tipo: 'positiva' },
+  { nombre: 'Limpiar después de la mascota', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Regar las plantas', puntos_valor: 2, tipo: 'positiva' },
+  { nombre: 'Cortar el césped', puntos_valor: 7, tipo: 'positiva' },
+  { nombre: 'Limpiar el coche', puntos_valor: 6, tipo: 'positiva' },
+  // --- Positivas: estudio y responsabilidad ---
+  { nombre: 'Hacer los deberes', puntos_valor: 5, tipo: 'positiva' },
+  { nombre: 'Estudiar una hora', puntos_valor: 5, tipo: 'positiva' },
+  { nombre: 'Leer un libro', puntos_valor: 4, tipo: 'positiva' },
+  { nombre: 'Ayudar con los deberes a un hermano', puntos_valor: 6, tipo: 'positiva' },
+  { nombre: 'Cuidar de un familiar', puntos_valor: 7, tipo: 'positiva' },
+  { nombre: 'Ser puntual toda la semana', puntos_valor: 6, tipo: 'positiva' },
+  // --- Negativas ---
+  { nombre: 'Dejar platos sucios', puntos_valor: -4, tipo: 'negativa' },
+  { nombre: 'Dejar la cama sin hacer', puntos_valor: -2, tipo: 'negativa' },
+  { nombre: 'Dejar la ropa tirada', puntos_valor: -3, tipo: 'negativa' },
+  { nombre: 'No sacar la basura', puntos_valor: -3, tipo: 'negativa' },
+  { nombre: 'Dejar el baño desordenado', puntos_valor: -4, tipo: 'negativa' },
+  { nombre: 'Llegar tarde sin avisar', puntos_valor: -5, tipo: 'negativa' },
+  { nombre: 'Pelearse con un hermano', puntos_valor: -6, tipo: 'negativa' },
+  { nombre: 'No hacer los deberes', puntos_valor: -5, tipo: 'negativa' },
+  { nombre: 'Contestar mal', puntos_valor: -4, tipo: 'negativa' },
+  { nombre: 'Mentir', puntos_valor: -8, tipo: 'negativa' },
+  { nombre: 'Dejar luces encendidas sin necesidad', puntos_valor: -2, tipo: 'negativa' },
+  { nombre: 'Perder o romper algo por descuido', puntos_valor: -5, tipo: 'negativa' },
+  { nombre: 'No cuidar a la mascota', puntos_valor: -6, tipo: 'negativa' },
+  { nombre: 'Usar el móvil en la mesa', puntos_valor: -3, tipo: 'negativa' },
+];
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
@@ -132,8 +196,19 @@ app.post('/familias', verificarToken, (req, res) => {
     const codigo = generarCodigo();
     const stmt = db.prepare('INSERT INTO familias (nombre, codigo_invitacion) VALUES (?, ?)');
     const resultado = stmt.run(nombre, codigo);
+    const familiaId = resultado.lastInsertRowid;
 
-    res.status(201).json({ id: resultado.lastInsertRowid, nombre, codigo_invitacion: codigo });
+    const insertarTarea = db.prepare(
+      'INSERT INTO tareas (familia_id, nombre, puntos_valor, tipo) VALUES (?, ?, ?, ?)'
+    );
+    const sembrarTareas = db.transaction((tareas) => {
+      for (const tarea of tareas) {
+        insertarTarea.run(familiaId, tarea.nombre, tarea.puntos_valor, tarea.tipo);
+      }
+    });
+    sembrarTareas(TAREAS_PREDEFINIDAS);
+
+    res.status(201).json({ id: familiaId, nombre, codigo_invitacion: codigo });
 });
 
 app.post('/familias/unirse', verificarToken, (req, res) => {

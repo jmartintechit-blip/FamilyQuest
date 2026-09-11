@@ -59,7 +59,6 @@ export const paletaOscura = {
 // porque son parte de su identidad (salud, mofletes, rasgos), no de la interfaz.
 export const colorMascota = {
   gradiente: ['#F2765C', '#FFC94D', '#2FA35D'],
-  glow: '#FFF3D6',
   mofletes: '#FF9E8F',
   rasgos: '#2B2E2C', // ojos y boca: siempre oscuros, en cualquier modo
 };

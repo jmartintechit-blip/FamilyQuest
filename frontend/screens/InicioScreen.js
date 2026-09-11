@@ -29,6 +29,9 @@ export default function InicioScreen() {
   const [especiesDesbloqueadas, setEspeciesDesbloqueadas] = useState(['manzana']);
   const [monedas, setMonedas] = useState(0);
   const [catalogoEspecies, setCatalogoEspecies] = useState(null);
+  const [cosmeticosDesbloqueados, setCosmeticosDesbloqueados] = useState([]);
+  const [cosmeticosEquipados, setCosmeticosEquipados] = useState({});
+  const [catalogoCosmeticos, setCatalogoCosmeticos] = useState(null);
   const [puntosFlotantes, setPuntosFlotantes] = useState([]);
   const [eventoActivo, setEventoActivo] = useState(null);
   const [modalNombreVisible, setModalNombreVisible] = useState(false);
@@ -58,6 +61,16 @@ export default function InicioScreen() {
       } catch {
         setEspeciesDesbloqueadas(['manzana']);
       }
+      try {
+        setCosmeticosDesbloqueados(JSON.parse(datos.cosmeticos_desbloqueados || '[]'));
+      } catch {
+        setCosmeticosDesbloqueados([]);
+      }
+      try {
+        setCosmeticosEquipados(JSON.parse(datos.cosmeticos_equipados || '{}'));
+      } catch {
+        setCosmeticosEquipados({});
+      }
     } catch (error) {
       console.log('Error cargando familia', error);
     }
@@ -73,6 +86,16 @@ export default function InicioScreen() {
     }
   }
 
+  async function cargarCatalogoCosmeticos() {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/cosmeticos-mascota`);
+      const datos = await respuesta.json();
+      setCatalogoCosmeticos(datos);
+    } catch (error) {
+      console.log('Error cargando catálogo de complementos', error);
+    }
+  }
+
   // Se ejecuta cada vez que se entra a esta pestaña, así los datos no
   // quedan desactualizados si algo cambió en otra pantalla.
   useFocusEffect(
@@ -80,6 +103,7 @@ export default function InicioScreen() {
       cargarTareas();
       cargarFamilia();
       cargarCatalogoEspecies();
+      cargarCatalogoCosmeticos();
     }, [usuario.familia_id])
   );
 
@@ -206,6 +230,57 @@ export default function InicioScreen() {
     }
   }
 
+  async function equiparCosmetico(slot, cosmetico) {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/cosmeticos`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ slot, cosmetico }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      setCosmeticosEquipados(datos.cosmeticos_equipados);
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo cambiar el complemento');
+    }
+  }
+
+  async function desbloquearCosmetico(cosmetico) {
+    try {
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/desbloquear-cosmetico`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ cosmetico }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      setCosmeticosDesbloqueados(datos.cosmeticos_desbloqueados);
+      setCosmeticosEquipados(datos.cosmeticos_equipados);
+      setMonedas(datos.monedas);
+      Alert.alert('¡Desbloqueado!', 'Nuevo complemento listo para lucir');
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo desbloquear el complemento');
+    }
+  }
+
   // Demo del "modo caos": activa un evento de ejemplo unos segundos.
   // Sustituir por la lógica real en cuanto el backend genere estos eventos.
   function simularEventoEspecial() {
@@ -226,6 +301,7 @@ export default function InicioScreen() {
         nombre={nombreMascota}
         onPresionarNombre={abrirModalNombre}
         especie={especieMascota}
+        cosmeticosEquipados={cosmeticosEquipados}
       />
 
       <TouchableOpacity onPress={() => setSelectorMascotaVisible(true)} style={styles.filaMonedas}>
@@ -266,10 +342,15 @@ export default function InicioScreen() {
         onClose={() => setSelectorMascotaVisible(false)}
         especieActiva={especieMascota}
         especiesDesbloqueadas={especiesDesbloqueadas}
-        costos={catalogoEspecies}
+        costosEspecies={catalogoEspecies}
+        cosmeticosDesbloqueados={cosmeticosDesbloqueados}
+        cosmeticosEquipados={cosmeticosEquipados}
+        costosCosmeticos={catalogoCosmeticos}
         monedas={monedas}
         onSeleccionar={seleccionarEspecie}
         onDesbloquear={desbloquearEspecie}
+        onEquiparCosmetico={equiparCosmetico}
+        onDesbloquearCosmetico={desbloquearCosmetico}
       />
     </ScrollView>
   );

@@ -1,64 +1,118 @@
+import { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { colores, tipografia, espaciado, radios } from '../../theme';
 import { ESPECIES } from './especies';
+import { COSMETICOS } from './cosmeticos';
 
-// especiesDesbloqueadas: string[]; costos: { [especie]: { costo } } (de GET /especies-mascota)
+const NOMBRES_SLOT = { sombrero: 'Sombrero', gafas: 'Gafas', cuello: 'Cuello' };
+
+function FilaOpcion({ emoji, nombre, desbloqueado, activo, costo, alcanza, onElegir, onDesbloquear, onQuitar }) {
+  return (
+    <View style={[estilos.fila, activo && estilos.filaActiva]}>
+      <Text style={estilos.emoji}>{emoji}</Text>
+      <Text style={[tipografia.cuerpo, { flex: 1 }]}>{nombre}</Text>
+
+      {desbloqueado ? (
+        <TouchableOpacity
+          onPress={() => (activo ? onQuitar?.() : onElegir())}
+          style={[estilos.boton, activo ? estilos.botonActivo : estilos.botonSecundario]}
+        >
+          <Text style={activo ? estilos.textoBotonActivo : estilos.textoBotonSecundario}>
+            {activo ? (onQuitar ? 'Quitar' : 'En uso') : 'Elegir'}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          onPress={() => alcanza && onDesbloquear()}
+          disabled={!alcanza}
+          style={[estilos.boton, alcanza ? estilos.botonSecundario : estilos.botonDeshabilitado]}
+        >
+          <Text style={alcanza ? estilos.textoBotonSecundario : estilos.textoBotonDeshabilitado}>🔒 {costo}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// especiesDesbloqueadas: string[]; costosEspecies: { [especie]: { costo } } (de GET /especies-mascota)
+// cosmeticosDesbloqueados: string[]; cosmeticosEquipados: { sombrero, gafas, cuello }
+// costosCosmeticos: { [id]: { slot, costo } } (de GET /cosmeticos-mascota)
 export default function SelectorMascota({
   visible,
   onClose,
   especieActiva,
   especiesDesbloqueadas,
-  costos,
+  costosEspecies,
+  cosmeticosDesbloqueados,
+  cosmeticosEquipados,
+  costosCosmeticos,
   monedas,
   onSeleccionar,
   onDesbloquear,
+  onEquiparCosmetico,
+  onDesbloquearCosmetico,
 }) {
+  const [pestana, setPestana] = useState('mascota');
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={estilos.fondo}>
         <View style={estilos.tarjeta}>
-          <Text style={tipografia.subtitulo}>Elige la mascota de tu familia</Text>
-          <Text style={[tipografia.cuerpoSuave, { marginTop: espaciado.xs, marginBottom: espaciado.md }]}>
-            🪙 {monedas} monedas familiares
-          </Text>
+          <Text style={[tipografia.cuerpoSuave, { marginBottom: espaciado.md }]}>🪙 {monedas} monedas familiares</Text>
 
-          <ScrollView style={{ maxHeight: 380 }}>
-            {Object.keys(ESPECIES).map((clave) => {
-              const info = ESPECIES[clave];
-              const desbloqueada = especiesDesbloqueadas.includes(clave);
-              const activa = especieActiva === clave;
-              const costo = costos?.[clave]?.costo ?? 0;
-              const alcanza = monedas >= costo;
+          <View style={estilos.pestanas}>
+            <TouchableOpacity onPress={() => setPestana('mascota')} style={[estilos.pestana, pestana === 'mascota' && estilos.pestanaActiva]}>
+              <Text style={pestana === 'mascota' ? estilos.textoPestanaActiva : estilos.textoPestana}>Mascota</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setPestana('complementos')} style={[estilos.pestana, pestana === 'complementos' && estilos.pestanaActiva]}>
+              <Text style={pestana === 'complementos' ? estilos.textoPestanaActiva : estilos.textoPestana}>Complementos</Text>
+            </TouchableOpacity>
+          </View>
 
-              return (
-                <View key={clave} style={[estilos.fila, activa && estilos.filaActiva]}>
-                  <Text style={estilos.emoji}>{info.emoji}</Text>
-                  <Text style={[tipografia.cuerpo, { flex: 1 }]}>{info.nombre}</Text>
-
-                  {desbloqueada ? (
-                    <TouchableOpacity
-                      onPress={() => onSeleccionar(clave)}
-                      disabled={activa}
-                      style={[estilos.boton, activa ? estilos.botonActivo : estilos.botonSecundario]}
-                    >
-                      <Text style={activa ? estilos.textoBotonActivo : estilos.textoBotonSecundario}>
-                        {activa ? 'En uso' : 'Elegir'}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() => alcanza && onDesbloquear(clave)}
-                      disabled={!alcanza}
-                      style={[estilos.boton, alcanza ? estilos.botonSecundario : estilos.botonDeshabilitado]}
-                    >
-                      <Text style={alcanza ? estilos.textoBotonSecundario : estilos.textoBotonDeshabilitado}>
-                        🔒 {costo}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })}
+          <ScrollView style={{ maxHeight: 360 }}>
+            {pestana === 'mascota'
+              ? Object.keys(ESPECIES).map((clave) => {
+                  const info = ESPECIES[clave];
+                  const costo = costosEspecies?.[clave]?.costo ?? 0;
+                  return (
+                    <FilaOpcion
+                      key={clave}
+                      emoji={info.emoji}
+                      nombre={info.nombre}
+                      desbloqueado={especiesDesbloqueadas.includes(clave)}
+                      activo={especieActiva === clave}
+                      costo={costo}
+                      alcanza={monedas >= costo}
+                      onElegir={() => onSeleccionar(clave)}
+                      onDesbloquear={() => onDesbloquear(clave)}
+                    />
+                  );
+                })
+              : ['sombrero', 'gafas', 'cuello'].map((slot) => (
+                  <View key={slot}>
+                    <Text style={estilos.tituloSlot}>{NOMBRES_SLOT[slot]}</Text>
+                    {Object.keys(COSMETICOS)
+                      .filter((clave) => COSMETICOS[clave].slot === slot)
+                      .map((clave) => {
+                        const info = COSMETICOS[clave];
+                        const costo = costosCosmeticos?.[clave]?.costo ?? 0;
+                        return (
+                          <FilaOpcion
+                            key={clave}
+                            emoji={info.emoji}
+                            nombre={info.nombre}
+                            desbloqueado={cosmeticosDesbloqueados.includes(clave)}
+                            activo={cosmeticosEquipados?.[slot] === clave}
+                            costo={costo}
+                            alcanza={monedas >= costo}
+                            onElegir={() => onEquiparCosmetico(slot, clave)}
+                            onDesbloquear={() => onDesbloquearCosmetico(clave)}
+                            onQuitar={() => onEquiparCosmetico(slot, null)}
+                          />
+                        );
+                      })}
+                  </View>
+                ))}
           </ScrollView>
 
           <TouchableOpacity onPress={onClose} style={estilos.cerrar}>
@@ -84,6 +138,36 @@ const estilos = StyleSheet.create({
     backgroundColor: colores.superficie,
     borderRadius: radios.lg,
     padding: espaciado.lg,
+  },
+  pestanas: {
+    flexDirection: 'row',
+    backgroundColor: colores.superficieSuave,
+    borderRadius: radios.md,
+    padding: 4,
+    marginBottom: espaciado.sm,
+  },
+  pestana: {
+    flex: 1,
+    paddingVertical: espaciado.xs,
+    alignItems: 'center',
+    borderRadius: radios.sm,
+  },
+  pestanaActiva: {
+    backgroundColor: colores.primario,
+  },
+  textoPestana: {
+    ...tipografia.chico,
+    color: colores.textoSuave,
+  },
+  textoPestanaActiva: {
+    ...tipografia.chico,
+    color: colores.textoSobrePrimario,
+  },
+  tituloSlot: {
+    ...tipografia.chico,
+    color: colores.textoSuave,
+    marginTop: espaciado.sm,
+    marginBottom: espaciado.xs,
   },
   fila: {
     flexDirection: 'row',

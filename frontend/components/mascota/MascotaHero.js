@@ -16,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { colores, tipografia, fuentes, espaciado, radios } from '../../theme';
 import { ESPECIES, Orejas, Marcas } from './especies';
+import Cosmeticos from './cosmeticos';
 
 // react-native-svg no anima sus props por sí solo: envolvemos las formas con
 // Reanimated para poder cambiar su "fill" o su "d" cuadro a cuadro.
@@ -37,7 +38,7 @@ function mensajePorSalud(salud) {
 // un instante sobre la mascota cuando se marca una tarea, y luego desaparecen.
 // nombre / onPresionarNombre: el nombre que le puso la familia a la mascota,
 // tocable para poder cambiarlo. especie: 'manzana' | 'oso' | 'capibara' | ...
-export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPresionarNombre, especie = 'manzana' }) {
+export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPresionarNombre, especie = 'manzana', cosmeticosEquipados }) {
   const info = ESPECIES[especie] || ESPECIES.manzana;
   const saludAnimada = useSharedValue(salud);
   const respiracion = useSharedValue(0);
@@ -140,6 +141,8 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
             strokeLinecap="round"
             fill="none"
           />
+
+          <Cosmeticos equipados={cosmeticosEquipados} />
         </Svg>
       </Animated.View>
 

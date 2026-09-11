@@ -74,7 +74,7 @@ export async function programarRecordatorioMascota() {
     await Notifications.scheduleNotificationAsync({
       identifier: ID_RECORDATORIO_MASCOTA,
       content: {
-        title: '🌱 ¿Cómo está vuestra mascota?',
+        title: '¿Cómo está vuestra mascota?',
         body: 'Hace un par de días que no revisáis FamilyQuest. ¡Echadle un vistazo!',
       },
       trigger: {

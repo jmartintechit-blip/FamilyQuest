@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -37,7 +38,9 @@ export default function BannerEvento({ evento }) {
       exiting={FadeOutUp.duration(300)}
       style={estilos.banner}
     >
-      <Animated.Text style={[estilos.icono, estiloBrillo]}>✨</Animated.Text>
+      <Animated.View style={[estilos.icono, estiloBrillo]}>
+        <Ionicons name="sparkles" size={20} color={colores.doradoOscuro} />
+      </Animated.View>
       <Text style={estilos.texto}>{evento.mensaje}</Text>
     </Animated.View>
   );
@@ -57,7 +60,6 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       marginBottom: espaciado.md,
     },
     icono: {
-      fontSize: 20,
       marginRight: espaciado.sm,
     },
     texto: {

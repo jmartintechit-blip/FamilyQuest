@@ -71,7 +71,7 @@ export default function AuthScreen() {
     <View style={styles.container}>
       <Text style={tipografia.tituloGrande}>FamilyQuest</Text>
       <Text style={[tipografia.cuerpoSuave, { marginTop: espaciado.sm, marginBottom: espaciado.lg }]}>
-        Tareas del hogar, en equipo 🌿
+        Tareas del hogar, en equipo
       </Text>
 
       {modoRegistro && <CampoTexto placeholder="Nombre" value={nombre} onChangeText={setNombre} />}

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Path, Circle, Ellipse } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedProps,
@@ -22,6 +23,7 @@ import Cosmeticos from './cosmeticos';
 // react-native-svg no anima sus props por sí solo: envolvemos las formas con
 // Reanimated para poder cambiar su "fill" o su "d" cuadro a cuadro.
 const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 // Color al que tiende CUALQUIER especie cuando está muy débil — la salud
@@ -62,9 +64,9 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
   }, []);
 
   const estiloCuerpo = useAnimatedStyle(() => {
-    const amplitudRebote = interpolate(saludAnimada.value, [0, 100], [0.006, 0.035], Extrapolation.CLAMP);
+    const amplitudRebote = interpolate(saludAnimada.value, [0, 100], [0.006, 0.03], Extrapolation.CLAMP);
     const escala = 1 + respiracion.value * amplitudRebote;
-    const inclinacion = interpolate(saludAnimada.value, [0, 100], [-6, 0], Extrapolation.CLAMP);
+    const inclinacion = interpolate(saludAnimada.value, [0, 100], [-5, 0], Extrapolation.CLAMP);
     return { transform: [{ scale: escala }, { rotate: `${inclinacion}deg` }] };
   });
 
@@ -76,7 +78,10 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
 
   // El color propio de la especie se "apaga" con una capa gris encima cuando
   // la salud es baja, en vez de sustituirlo por un color que no le pertenece.
-  const propsApagado = useAnimatedProps(() => ({
+  const propsApagadoCuerpo = useAnimatedProps(() => ({
+    opacity: interpolate(saludAnimada.value, [0, 100], [0.6, 0], Extrapolation.CLAMP),
+  }));
+  const propsApagadoCabeza = useAnimatedProps(() => ({
     opacity: interpolate(saludAnimada.value, [0, 100], [0.6, 0], Extrapolation.CLAMP),
   }));
 
@@ -87,8 +92,8 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
 
   // La boca pasa de una curva triste a una sonrisa moviendo su punto de control.
   const propsBoca = useAnimatedProps(() => {
-    const curvatura = interpolate(saludAnimada.value, [0, 100], [118, 156], Extrapolation.CLAMP);
-    return { d: `M72,132 Q100,${curvatura} 128,132` };
+    const curvatura = interpolate(saludAnimada.value, [0, 100], [108, 146], Extrapolation.CLAMP);
+    return { d: `M81,122 Q100,${curvatura} 119,122` };
   });
 
   const estiloBarra = useAnimatedStyle(() => ({
@@ -112,35 +117,48 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
       ))}
 
       <Animated.View style={estiloCuerpo}>
-        <Svg width={180} height={180} viewBox="0 0 200 200">
+        <Svg width={168} height={235} viewBox="0 0 200 280">
+          {/* cuerpo */}
+          <Ellipse cx="100" cy="185" rx="80" ry="88" fill={info.colorCuerpo} />
+          <AnimatedEllipse animatedProps={propsApagadoCuerpo} cx="100" cy="185" rx="80" ry="88" fill={COLOR_APAGADO} />
+
+          {/* barriga: mancha más clara para dar volumen, sin usar degradados */}
+          <Ellipse cx="100" cy="204" rx="42" ry="52" fill="#FFFFFF" opacity={0.16} />
+
+          {/* pies, encima del cuerpo para que se vean enteros */}
+          <Ellipse cx="70" cy="260" rx="23" ry="15" fill={info.colorOscuro} />
+          <Ellipse cx="130" cy="260" rx="23" ry="15" fill={info.colorOscuro} />
+
+          {/* brazos, encima del cuerpo para que se vean enteros */}
+          <Ellipse cx="34" cy="150" rx="18" ry="36" fill={info.colorOscuro} transform="rotate(-24 34 150)" />
+          <Ellipse cx="166" cy="150" rx="18" ry="36" fill={info.colorOscuro} transform="rotate(24 166 150)" />
+
           <Orejas especie={especie} colorCuerpo={info.colorCuerpo} colorOscuro={info.colorOscuro} />
 
-          {/* cuerpo: óvalo ancho y redondeado = más "gordito" que un blob alargado */}
-          <Ellipse cx="100" cy="115" rx="78" ry="68" fill={info.colorCuerpo} />
-
-          {/* capa gris que se hace visible cuando la salud es baja ("apagado") */}
-          <AnimatedEllipse animatedProps={propsApagado} cx="100" cy="115" rx="78" ry="68" fill={COLOR_APAGADO} />
+          {/* cabeza */}
+          <Circle cx="100" cy="95" r="56" fill={info.colorCuerpo} />
+          <AnimatedCircle animatedProps={propsApagadoCabeza} cx="100" cy="95" r="56" fill={COLOR_APAGADO} />
 
           {/* brillo superior para dar aspecto pulido/brillante, no plano */}
-          <Ellipse cx="72" cy="80" rx="28" ry="16" fill="#FFFFFF" opacity={0.28} transform="rotate(-25 72 80)" />
+          <Ellipse cx="76" cy="66" rx="24" ry="14" fill="#FFFFFF" opacity={0.25} transform="rotate(-25 76 66)" />
 
           <Marcas especie={especie} colorCuerpo={info.colorCuerpo} colorOscuro={info.colorOscuro} />
 
           {/* mofletes sonrosados */}
-          <AnimatedEllipse animatedProps={propsMofletes} cx="58" cy="132" rx="14" ry="9" fill={colorMascota.mofletes} />
-          <AnimatedEllipse animatedProps={propsMofletes} cx="142" cy="132" rx="14" ry="9" fill={colorMascota.mofletes} />
+          <AnimatedEllipse animatedProps={propsMofletes} cx="69" cy="110" rx="11" ry="7" fill={colorMascota.mofletes} />
+          <AnimatedEllipse animatedProps={propsMofletes} cx="131" cy="110" rx="11" ry="7" fill={colorMascota.mofletes} />
 
           {/* ojos grandes con brillo, para más ternura */}
-          <Circle cx="74" cy="104" r="11" fill={colorMascota.rasgos} />
-          <Circle cx="126" cy="104" r="11" fill={colorMascota.rasgos} />
-          <Circle cx="70.5" cy="100" r="3.2" fill="#FFFFFF" />
-          <Circle cx="122.5" cy="100" r="3.2" fill="#FFFFFF" />
+          <Circle cx="81" cy="92" r="9" fill={colorMascota.rasgos} />
+          <Circle cx="119" cy="92" r="9" fill={colorMascota.rasgos} />
+          <Circle cx="78" cy="89" r="2.4" fill="#FFFFFF" />
+          <Circle cx="116" cy="89" r="2.4" fill="#FFFFFF" />
 
           {/* boca animada */}
           <AnimatedPath
             animatedProps={propsBoca}
             stroke={colorMascota.rasgos}
-            strokeWidth={5.5}
+            strokeWidth={5}
             strokeLinecap="round"
             fill="none"
           />
@@ -151,7 +169,7 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
 
       <TouchableOpacity onPress={onPresionarNombre} style={estilos.filaNombre} activeOpacity={0.6}>
         <Text style={estilos.nombre}>{nombre}</Text>
-        <Text style={estilos.lapiz}>✏️</Text>
+        <Ionicons name="pencil-outline" size={14} color={colores.textoSuave} />
       </TouchableOpacity>
 
       <Text style={estilos.mensaje}>{mensajePorSalud(salud)}</Text>
@@ -172,10 +190,10 @@ function crearEstilos(colores, tipografia, fuentes, espaciado, radios) {
     },
     glow: {
       position: 'absolute',
-      top: espaciado.lg - 20,
-      width: 240,
-      height: 240,
-      borderRadius: 120,
+      top: espaciado.lg - 10,
+      width: 260,
+      height: 260,
+      borderRadius: 130,
       backgroundColor: colorMascota.glow,
     },
     puntoFlotante: {
@@ -196,10 +214,6 @@ function crearEstilos(colores, tipografia, fuentes, espaciado, radios) {
     nombre: {
       ...tipografia.titulo,
       fontFamily: fuentes.extraNegrita,
-    },
-    lapiz: {
-      fontSize: 14,
-      opacity: 0.6,
     },
     mensaje: {
       ...tipografia.subtitulo,

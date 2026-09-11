@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "app-familia",
-    "slug": "app-familia",
+    "name": "FamilyQuest",
+    "slug": "familyquest",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F6FAF7"
     },
     "plugins": [
       "expo-font",

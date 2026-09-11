@@ -67,7 +67,7 @@ export default function AuthScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={tipografia.tituloGrande}>App Familia</Text>
+      <Text style={tipografia.tituloGrande}>FamilyQuest</Text>
       <Text style={[tipografia.cuerpoSuave, { marginTop: espaciado.sm, marginBottom: espaciado.lg }]}>
         Tareas del hogar, en equipo 🌿
       </Text>

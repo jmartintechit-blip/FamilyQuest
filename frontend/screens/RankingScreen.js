@@ -8,14 +8,17 @@ import Tarjeta from '../components/Tarjeta';
 import RankingLista from '../components/RankingLista';
 
 export default function RankingScreen() {
-  const { usuario } = useAuth();
+  const { usuario, token } = useAuth();
   const { colores, tipografia, espaciado } = useTema();
   const styles = crearEstilos(colores);
   const [ranking, setRanking] = useState([]);
 
   async function cargarRanking() {
     try {
-      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/ranking`);
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/ranking`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!respuesta.ok) return;
       const datos = await respuesta.json();
       setRanking(datos);
     } catch (error) {

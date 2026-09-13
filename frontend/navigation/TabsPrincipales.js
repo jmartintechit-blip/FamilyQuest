@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useTema } from '../context/TemaContext';
@@ -23,19 +23,35 @@ const ICONOS = {
 };
 
 // Botón central "+" para añadir tareas: más grande, elevado sobre la barra,
-// para que destaque como la acción rápida más habitual.
-function BotonTareasCentral({ onPress, colores }) {
+// para que destaque como la acción rápida más habitual. Recibe (y aplica) el
+// resto de props que React Navigation pasa a cualquier tabBarButton -sobre
+// todo `style`, que trae el `flex` que reparte el ancho por igual entre las
+// 6 pestañas- para que ocupe la misma columna que sus vecinas y no se vea
+// descentrado.
+function BotonTareasCentral({ onPress, colores, style }) {
   const estilos = crearEstilosBotonCentral(colores);
   return (
-    <TouchableOpacity onPress={onPress} style={estilos.contenedor} activeOpacity={0.85}>
-      <Ionicons name="add" size={30} color={colores.textoSobrePrimario} />
+    <TouchableOpacity
+      onPress={onPress}
+      style={[style, estilos.columna]}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel="Añadir tarea"
+    >
+      <View style={estilos.circulo}>
+        <Ionicons name="add" size={30} color={colores.textoSobrePrimario} />
+      </View>
     </TouchableOpacity>
   );
 }
 
 function crearEstilosBotonCentral(colores) {
   return StyleSheet.create({
-    contenedor: {
+    columna: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    circulo: {
       top: -18,
       width: 56,
       height: 56,
@@ -43,7 +59,6 @@ function crearEstilosBotonCentral(colores) {
       backgroundColor: colores.primario,
       alignItems: 'center',
       justifyContent: 'center',
-      alignSelf: 'center',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.2,
@@ -86,7 +101,7 @@ export default function TabsPrincipales() {
         component={TareasScreen}
         options={{
           tabBarLabel: () => null,
-          tabBarButton: (props) => <BotonTareasCentral onPress={props.onPress} colores={colores} />,
+          tabBarButton: (props) => <BotonTareasCentral {...props} colores={colores} />,
         }}
       />
       <Tab.Screen name="Chat" component={ChatScreen} />

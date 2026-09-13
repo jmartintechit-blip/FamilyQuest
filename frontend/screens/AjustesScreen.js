@@ -96,12 +96,13 @@ export default function AjustesScreen() {
 
   async function cargarFamilia() {
     try {
+      const cabecera = { headers: { 'Authorization': `Bearer ${token}` } };
       const [respuestaFamilia, respuestaMiembros] = await Promise.all([
-        fetch(`${URL_BASE}/familias/${usuario.familia_id}`),
-        fetch(`${URL_BASE}/familias/${usuario.familia_id}/usuarios`),
+        fetch(`${URL_BASE}/familias/${usuario.familia_id}`, cabecera),
+        fetch(`${URL_BASE}/familias/${usuario.familia_id}/usuarios`, cabecera),
       ]);
-      setFamilia(await respuestaFamilia.json());
-      setMiembros(await respuestaMiembros.json());
+      if (respuestaFamilia.ok) setFamilia(await respuestaFamilia.json());
+      if (respuestaMiembros.ok) setMiembros(await respuestaMiembros.json());
     } catch (error) {
       console.log('Error cargando datos de familia', error);
     }

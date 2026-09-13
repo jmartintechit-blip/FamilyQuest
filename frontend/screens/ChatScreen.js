@@ -19,7 +19,10 @@ export default function ChatScreen() {
 
   async function cargarMensajes() {
     try {
-      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/mensajes`);
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/mensajes`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!respuesta.ok) return;
       const datos = await respuesta.json();
       setMensajes(datos);
     } catch (error) {

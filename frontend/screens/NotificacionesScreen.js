@@ -31,6 +31,7 @@ export default function NotificacionesScreen() {
       const respuesta = await fetch(`${URL_BASE}/usuarios/${usuario.id}/notificaciones`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
+      if (!respuesta.ok) return;
       const datos = await respuesta.json();
       setNotificaciones(datos);
     } catch (error) {

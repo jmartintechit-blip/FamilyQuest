@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { URL_BASE } from '../constants/config';
 import { useAuth } from '../context/AuthContext';
 import { useTema } from '../context/TemaContext';
@@ -26,6 +26,7 @@ export default function InicioScreen() {
   const { usuario, token } = useAuth();
   const { colores, tipografia, espaciado, radios } = useTema();
   const styles = crearEstilos(colores, tipografia, espaciado, radios);
+  const navigation = useNavigation();
   const [tareas, setTareas] = useState([]);
   const [saludMascota, setSaludMascota] = useState(100);
   const [nombreMascota, setNombreMascota] = useState('Brote');
@@ -41,10 +42,6 @@ export default function InicioScreen() {
   const [modalNombreVisible, setModalNombreVisible] = useState(false);
   const [nombreEnEdicion, setNombreEnEdicion] = useState('');
   const [selectorMascotaVisible, setSelectorMascotaVisible] = useState(false);
-  const [modalTareaVisible, setModalTareaVisible] = useState(false);
-  const [nombreNuevaTarea, setNombreNuevaTarea] = useState('');
-  const [tipoNuevaTarea, setTipoNuevaTarea] = useState('positiva');
-  const [puntosNuevaTarea, setPuntosNuevaTarea] = useState('');
 
   async function cargarTareas() {
     try {
@@ -294,54 +291,6 @@ export default function InicioScreen() {
     }
   }
 
-  function abrirModalTarea() {
-    setNombreNuevaTarea('');
-    setTipoNuevaTarea('positiva');
-    setPuntosNuevaTarea('');
-    setModalTareaVisible(true);
-  }
-
-  async function crearTarea() {
-    const magnitud = parseInt(puntosNuevaTarea, 10);
-
-    if (!nombreNuevaTarea.trim()) {
-      Alert.alert('Falta el nombre', 'Escribe un nombre para la tarea');
-      return;
-    }
-    if (!magnitud || magnitud <= 0) {
-      Alert.alert('Puntos no válidos', 'Escribe un número de puntos mayor que 0');
-      return;
-    }
-
-    try {
-      const respuesta = await fetch(`${URL_BASE}/tareas`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          familia_id: usuario.familia_id,
-          nombre: nombreNuevaTarea.trim(),
-          puntos_valor: tipoNuevaTarea === 'positiva' ? magnitud : -magnitud,
-          tipo: tipoNuevaTarea,
-        }),
-      });
-
-      const datos = await respuesta.json();
-
-      if (!respuesta.ok) {
-        Alert.alert('Error', datos.error);
-        return;
-      }
-
-      setModalTareaVisible(false);
-      cargarTareas();
-    } catch (error) {
-      Alert.alert('Error de conexión', 'No se pudo crear la tarea');
-    }
-  }
-
   function confirmarEliminarTarea(tareaId) {
     Alert.alert('¿Eliminar tarea?', 'Esto no borra el historial de puntos ya ganados con ella.', [
       { text: 'Cancelar', style: 'cancel' },
@@ -402,14 +351,23 @@ export default function InicioScreen() {
       <Tarjeta>
         <View style={styles.filaSeccion}>
           <Text style={styles.seccion}>Tus tareas</Text>
-          <TouchableOpacity onPress={abrirModalTarea} style={styles.filaAnadir}>
+          <TouchableOpacity onPress={() => navigation.navigate('Tareas')} style={styles.filaAnadir}>
             <Ionicons name="add" size={16} color={colores.primario} />
             <Text style={styles.enlaceCambiar}>Añadir</Text>
           </TouchableOpacity>
         </View>
-        {tareas.map((tarea) => (
+        {tareas.slice(0, 5).map((tarea) => (
           <TareaItem key={tarea.id} tarea={tarea} onMarcar={marcarTareaHecha} onEliminar={confirmarEliminarTarea} />
         ))}
+        {tareas.length === 0 && (
+          <Text style={[tipografia.cuerpoSuave, { textAlign: 'center', paddingVertical: espaciado.sm }]}>
+            Aún no hay tareas
+          </Text>
+        )}
+        <TouchableOpacity onPress={() => navigation.navigate('Tareas')} style={styles.filaVerMas}>
+          <Text style={styles.enlaceCambiar}>Ver todas las tareas</Text>
+          <Ionicons name="chevron-forward" size={16} color={colores.primario} />
+        </TouchableOpacity>
       </Tarjeta>
 
       <TouchableOpacity onPress={simularEventoEspecial} style={styles.filaDemo}>
@@ -430,53 +388,6 @@ export default function InicioScreen() {
             />
             <BotonPrincipal titulo="Guardar" onPress={guardarNombreMascota} />
             <BotonPrincipal titulo="Cancelar" variante="secundario" onPress={() => setModalNombreVisible(false)} />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={modalTareaVisible} transparent animationType="fade" onRequestClose={() => setModalTareaVisible(false)}>
-        <View style={styles.fondoModal}>
-          <View style={styles.tarjetaModal}>
-            <Text style={[tipografia.subtitulo, { marginBottom: espaciado.sm }]}>Nueva tarea</Text>
-            <CampoTexto
-              placeholder="Nombre de la tarea"
-              value={nombreNuevaTarea}
-              onChangeText={setNombreNuevaTarea}
-              maxLength={40}
-              autoFocus
-            />
-            <View style={styles.filaTipo}>
-              <TouchableOpacity
-                onPress={() => setTipoNuevaTarea('positiva')}
-                style={[styles.opcionTipo, tipoNuevaTarea === 'positiva' && styles.opcionTipoActiva]}
-              >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={16}
-                  color={tipoNuevaTarea === 'positiva' ? colores.primarioOscuro : colores.textoSuave}
-                />
-                <Text style={tipoNuevaTarea === 'positiva' ? styles.textoTipoActivo : styles.textoTipo}> Suma puntos</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setTipoNuevaTarea('negativa')}
-                style={[styles.opcionTipo, tipoNuevaTarea === 'negativa' && styles.opcionTipoActiva]}
-              >
-                <Ionicons
-                  name="remove-circle-outline"
-                  size={16}
-                  color={tipoNuevaTarea === 'negativa' ? colores.primarioOscuro : colores.textoSuave}
-                />
-                <Text style={tipoNuevaTarea === 'negativa' ? styles.textoTipoActivo : styles.textoTipo}> Resta puntos</Text>
-              </TouchableOpacity>
-            </View>
-            <CampoTexto
-              placeholder="Puntos (ej. 5)"
-              value={puntosNuevaTarea}
-              onChangeText={setPuntosNuevaTarea}
-              keyboardType="numeric"
-            />
-            <BotonPrincipal titulo="Crear tarea" onPress={crearTarea} />
-            <BotonPrincipal titulo="Cancelar" variante="secundario" onPress={() => setModalTareaVisible(false)} />
           </View>
         </View>
       </Modal>
@@ -515,32 +426,15 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       alignItems: 'center',
       marginBottom: espaciado.sm,
     },
-    filaTipo: {
+    filaVerMas: {
       flexDirection: 'row',
-      gap: espaciado.sm,
-      marginBottom: espaciado.md,
-    },
-    opcionTipo: {
-      flex: 1,
-      flexDirection: 'row',
-      paddingVertical: espaciado.sm,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: radios.md,
-      borderWidth: 1.5,
-      borderColor: colores.borde,
-    },
-    opcionTipoActiva: {
-      backgroundColor: colores.primarioSuave,
-      borderColor: colores.primario,
-    },
-    textoTipo: {
-      ...tipografia.chico,
-      color: colores.textoSuave,
-    },
-    textoTipoActivo: {
-      ...tipografia.chico,
-      color: colores.primarioOscuro,
+      gap: 4,
+      marginTop: espaciado.sm,
+      paddingTop: espaciado.sm,
+      borderTopWidth: 1,
+      borderTopColor: colores.borde,
     },
     filaMonedas: {
       flexDirection: 'row',

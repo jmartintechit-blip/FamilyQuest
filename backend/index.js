@@ -7,6 +7,14 @@ const db = require('./db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
+// Devuelve el familia_id de un usuario, o null si no existe o no tiene
+// familia. Se usa para comprobar que quien hace la petición realmente
+// pertenece a la familia que está intentando leer o modificar.
+function obtenerFamiliaDeUsuario(usuarioId) {
+  const usuario = db.prepare('SELECT familia_id FROM usuarios WHERE id = ?').get(usuarioId);
+  return usuario ? usuario.familia_id : null;
+}
+
 function verificarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
 
@@ -165,24 +173,6 @@ app.get('/', (req, res) => {
     res.send('Hola Juan! Tu servidor está funcionando');
 });
 
-app.post('/usuarios', (req, res) => {
-    const { nombre, email } = req.body;
-
-    if (!nombre || !email) {
-        return res.status(400).json({ error: 'Nombre y email son obligatorios' });
-    }
-
-    const stmt = db.prepare('INSERT INTO usuarios (nombre, email) VALUES (?, ?)');
-    const resultado = stmt.run(nombre, email);
-
-    res.status(201).json({ id: resultado.lastInsertRowid, nombre, email });
-});
-
-app.get('/usuarios', (req, res) => {
-  const usuarios = db.prepare('SELECT * FROM usuarios').all();
-  res.json(usuarios);
-});
-
 function generarCodigo() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
@@ -214,6 +204,10 @@ app.post('/familias', verificarToken, (req, res) => {
 app.post('/familias/unirse', verificarToken, (req, res) => {
     const { usuario_id, codigo_invitacion } = req.body;
 
+    if (req.usuario.id !== Number(usuario_id)) {
+        return res.status(403).json({ error: 'No puedes hacer esto en nombre de otro usuario' });
+    }
+
     const familia = db.prepare('SELECT * FROM familias WHERE codigo_invitacion = ?').get(codigo_invitacion);
 
     if (!familia) {
@@ -228,8 +222,13 @@ app.post('/familias/unirse', verificarToken, (req, res) => {
     });
 });
 
-app.get('/familias/:id/usuarios', (req, res) => {
+app.get('/familias/:id/usuarios', verificarToken, (req, res) => {
     const { id } = req.params;
+
+    if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
+        return res.status(403).json({ error: 'No perteneces a esta familia' });
+    }
+
     const usuarios = db.prepare(
         'SELECT id, nombre, email, puntos_totales, fecha_creacion FROM usuarios WHERE familia_id = ? ORDER BY puntos_totales DESC'
     ).all(id);
@@ -259,14 +258,23 @@ app.post('/tareas', verificarToken, (req, res) => {
     return res.status(400).json({ error: 'El tipo debe ser "positiva" o "negativa"' });
   }
 
+  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(familia_id)) {
+    return res.status(403).json({ error: 'No perteneces a esta familia' });
+  }
+
   const stmt = db.prepare('INSERT INTO tareas (familia_id, nombre, puntos_valor, tipo) VALUES (?, ?, ?, ?)');
   const resultado = stmt.run(familia_id, nombre, puntos_valor, tipo);
 
   res.status(201).json({ id: resultado.lastInsertRowid, familia_id, nombre, puntos_valor, tipo });
 });
 
-app.get('/familias/:id/tareas', (req, res) => {
+app.get('/familias/:id/tareas', verificarToken, (req, res) => {
   const { id } = req.params;
+
+  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
+    return res.status(403).json({ error: 'No perteneces a esta familia' });
+  }
+
   const tareas = db.prepare('SELECT * FROM tareas WHERE familia_id = ? ORDER BY tipo DESC, id DESC').all(id);
   res.json(tareas);
 });
@@ -303,6 +311,11 @@ app.post('/eventos', verificarToken, (req, res) => {
   const usuario = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(usuario_id);
   if (!usuario) {
     return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  const familiaSolicitante = obtenerFamiliaDeUsuario(req.usuario.id);
+  if (!familiaSolicitante || familiaSolicitante !== usuario.familia_id || familiaSolicitante !== tarea.familia_id) {
+    return res.status(403).json({ error: 'Esta tarea o este usuario no pertenecen a tu familia' });
   }
 
   if (usuario.familia_id) revisarResetRanking(usuario.familia_id);
@@ -372,8 +385,13 @@ app.put('/usuarios/push-token', verificarToken, (req, res) => {
   res.json({ mensaje: 'Token guardado' });
 });
 
-app.get('/familias/:id/ranking', (req, res) => {
+app.get('/familias/:id/ranking', verificarToken, (req, res) => {
   const { id } = req.params;
+
+  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
+    return res.status(403).json({ error: 'No perteneces a esta familia' });
+  }
+
   revisarResetRanking(id);
   const ranking = db.prepare(
     'SELECT nombre, puntos_totales FROM usuarios WHERE familia_id = ? ORDER BY puntos_totales DESC'
@@ -381,8 +399,13 @@ app.get('/familias/:id/ranking', (req, res) => {
   res.json(ranking);
 });
 
-app.get('/familias/:id', (req, res) => {
+app.get('/familias/:id', verificarToken, (req, res) => {
   const { id } = req.params;
+
+  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
+    return res.status(403).json({ error: 'No perteneces a esta familia' });
+  }
+
   revisarResetRanking(id);
   const familia = db.prepare('SELECT * FROM familias WHERE id = ?').get(id);
 
@@ -396,6 +419,10 @@ app.get('/familias/:id', (req, res) => {
 app.put('/familias/:id/mascota', verificarToken, (req, res) => {
   const { id } = req.params;
   const { nombre_mascota } = req.body;
+
+  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
+    return res.status(403).json({ error: 'No perteneces a esta familia' });
+  }
 
   if (!nombre_mascota || !nombre_mascota.trim()) {
     return res.status(400).json({ error: 'El nombre de la mascota es obligatorio' });
@@ -420,6 +447,10 @@ app.put('/familias/:id/especie', verificarToken, (req, res) => {
   const { id } = req.params;
   const { especie } = req.body;
 
+  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
+    return res.status(403).json({ error: 'No perteneces a esta familia' });
+  }
+
   if (!ESPECIES_MASCOTA[especie]) {
     return res.status(400).json({ error: 'Especie no válida' });
   }
@@ -442,6 +473,10 @@ app.put('/familias/:id/especie', verificarToken, (req, res) => {
 app.post('/familias/:id/desbloquear', verificarToken, (req, res) => {
   const { id } = req.params;
   const { especie } = req.body;
+
+  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
+    return res.status(403).json({ error: 'No perteneces a esta familia' });
+  }
 
   const definicion = ESPECIES_MASCOTA[especie];
   if (!definicion) {
@@ -482,6 +517,10 @@ app.put('/familias/:id/cosmeticos', verificarToken, (req, res) => {
   const { id } = req.params;
   const { slot, cosmetico } = req.body;
 
+  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
+    return res.status(403).json({ error: 'No perteneces a esta familia' });
+  }
+
   if (!slot) {
     return res.status(400).json({ error: 'Falta la categoría del complemento' });
   }
@@ -515,6 +554,10 @@ app.put('/familias/:id/cosmeticos', verificarToken, (req, res) => {
 app.post('/familias/:id/desbloquear-cosmetico', verificarToken, (req, res) => {
   const { id } = req.params;
   const { cosmetico } = req.body;
+
+  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
+    return res.status(403).json({ error: 'No perteneces a esta familia' });
+  }
 
   const definicion = COSMETICOS_MASCOTA[cosmetico];
   if (!definicion) {
@@ -556,6 +599,10 @@ app.post('/mensajes', verificarToken, (req, res) => {
     return res.status(400).json({ error: 'familia_id, usuario_id y texto son obligatorios' });
   }
 
+  if (req.usuario.id !== Number(usuario_id) || obtenerFamiliaDeUsuario(req.usuario.id) !== Number(familia_id)) {
+    return res.status(403).json({ error: 'No puedes enviar mensajes en nombre de otro usuario o de otra familia' });
+  }
+
   const stmt = db.prepare('INSERT INTO mensajes (familia_id, usuario_id, texto) VALUES (?, ?, ?)');
   const resultado = stmt.run(familia_id, usuario_id, texto);
 
@@ -575,8 +622,13 @@ app.post('/mensajes', verificarToken, (req, res) => {
   res.status(201).json(mensajeCompleto);
 });
 
-app.get('/familias/:id/mensajes', (req, res) => {
+app.get('/familias/:id/mensajes', verificarToken, (req, res) => {
   const { id } = req.params;
+
+  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
+    return res.status(403).json({ error: 'No perteneces a esta familia' });
+  }
+
   const mensajes = db.prepare(`
     SELECT mensajes.id, mensajes.texto, mensajes.fecha_hora, usuarios.nombre AS autor
     FROM mensajes

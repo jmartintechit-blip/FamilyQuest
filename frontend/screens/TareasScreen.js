@@ -29,7 +29,10 @@ export default function TareasScreen() {
 
   async function cargarTareas() {
     try {
-      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/tareas`);
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/tareas`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!respuesta.ok) return;
       const datos = await respuesta.json();
       setTareas(datos);
     } catch (error) {

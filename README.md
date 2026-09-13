@@ -9,6 +9,7 @@
 ![Node.js](https://img.shields.io/badge/Node.js-Express_5-339933?style=flat-square&logo=node.js&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003B57?style=flat-square&logo=sqlite&logoColor=white)
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-tiempo_real-010101?style=flat-square&logo=socket.io&logoColor=white)
+![Licencia](https://img.shields.io/badge/Licencia-Todos_los_derechos_reservados-lightgrey?style=flat-square)
 
 </div>
 
@@ -26,6 +27,7 @@ Pensada para que la use cualquier miembro de la familia sin importar su edad o s
 - [Seguridad](#seguridad)
 - [Cómo funciona por dentro](#cómo-funciona-por-dentro)
 - [Hoja de ruta](#hoja-de-ruta)
+- [Licencia](#licencia)
 
 ## Qué hace
 
@@ -151,6 +153,12 @@ Cada endpoint que lee o modifica datos de una familia comprueba, en el servidor,
 - [ ] Notificaciones push reales entre miembros de la familia (requiere EAS)
 - [ ] Onboarding para usuarios nuevos
 - [ ] Build instalable con EAS (`.apk` / `.ipa`)
+
+## Licencia
+
+Copyright © 2026 Juan Nadales. Todos los derechos reservados.
+
+Este repositorio se comparte únicamente con fines de exhibición personal (portfolio). Puedes leer el código para aprender o evaluarlo, pero **no está permitido usarlo, copiarlo, redistribuirlo ni monetizarlo**, en su totalidad o en parte, sin permiso explícito del autor. Ver [`LICENSE`](LICENSE) para el texto completo.
 
 ---
 

@@ -43,25 +43,14 @@ Cada familia tiene su propio espacio privado, al que se accede creando una cuent
 
 ## Capturas
 
-*(Pendiente — coloca aquí capturas reales tomadas desde el móvil con Expo Go.)*
-
-Guarda las imágenes en `docs/screenshots/` con estos nombres y se mostrarán automáticamente:
-
-| Archivo | Pantalla |
-|---|---|
-| `docs/screenshots/inicio.png` | Inicio (mascota + tareas) |
-| `docs/screenshots/tareas.png` | Tareas (búsqueda y filtros) |
-| `docs/screenshots/ranking.png` | Ranking |
-| `docs/screenshots/chat.png` | Chat |
-| `docs/screenshots/ajustes.png` | Ajustes |
-
-```markdown
-<img src="docs/screenshots/inicio.png" width="200" />
-<img src="docs/screenshots/tareas.png" width="200" />
-<img src="docs/screenshots/ranking.png" width="200" />
-<img src="docs/screenshots/chat.png" width="200" />
-<img src="docs/screenshots/ajustes.png" width="200" />
-```
+<div align="center">
+<img src="docs/screenshots/inicio.png" width="180" alt="Inicio: mascota y tareas del día" />
+<img src="docs/screenshots/tareas.png" width="180" alt="Tareas: búsqueda y filtros" />
+<img src="docs/screenshots/ranking.png" width="180" alt="Ranking semanal" />
+<img src="docs/screenshots/chat.png" width="180" alt="Chat familiar" />
+<img src="docs/screenshots/notificaciones.png" width="180" alt="Notificaciones de actividad" />
+<img src="docs/screenshots/ajustes.png" width="180" alt="Ajustes y gestión de familia" />
+</div>
 
 ## Stack técnico
 

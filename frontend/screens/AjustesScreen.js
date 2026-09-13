@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Share } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Modal, Alert, Share } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -8,6 +8,7 @@ import { useTema } from '../context/TemaContext';
 import { URL_BASE } from '../constants/config';
 import { TAMANOS_FUENTE } from '../theme';
 import BotonPrincipal from '../components/BotonPrincipal';
+import CampoTexto from '../components/CampoTexto';
 import Tarjeta from '../components/Tarjeta';
 
 const OPCIONES_MODO = [
@@ -88,6 +89,11 @@ export default function AjustesScreen() {
   const styles = crearEstilos(colores, tipografia, espaciado, radios);
   const [familia, setFamilia] = useState(null);
   const [miembros, setMiembros] = useState([]);
+  const [modalPasswordVisible, setModalPasswordVisible] = useState(false);
+  const [passwordActual, setPasswordActual] = useState('');
+  const [passwordNueva, setPasswordNueva] = useState('');
+  const [passwordConfirmar, setPasswordConfirmar] = useState('');
+  const [cambiandoPassword, setCambiandoPassword] = useState(false);
 
   const opcionesTamano = Object.keys(TAMANOS_FUENTE).map((clave) => ({
     valor: clave,
@@ -159,6 +165,54 @@ export default function AjustesScreen() {
     }
   }
 
+  function abrirModalPassword() {
+    setPasswordActual('');
+    setPasswordNueva('');
+    setPasswordConfirmar('');
+    setModalPasswordVisible(true);
+  }
+
+  async function cambiarPassword() {
+    if (!passwordActual || !passwordNueva || !passwordConfirmar) {
+      Alert.alert('Faltan datos', 'Rellena los tres campos');
+      return;
+    }
+    if (passwordNueva.length < 8) {
+      Alert.alert('Contraseña demasiado corta', 'La nueva contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+    if (passwordNueva !== passwordConfirmar) {
+      Alert.alert('No coinciden', 'La nueva contraseña y su confirmación no son iguales');
+      return;
+    }
+
+    setCambiandoPassword(true);
+    try {
+      const respuesta = await fetch(`${URL_BASE}/usuarios/${usuario.id}/password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password_actual: passwordActual, password_nueva: passwordNueva }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return;
+      }
+
+      setModalPasswordVisible(false);
+      Alert.alert('Listo', 'Tu contraseña se ha actualizado');
+    } catch (error) {
+      Alert.alert('Error de conexión', 'No se pudo cambiar la contraseña');
+    } finally {
+      setCambiandoPassword(false);
+    }
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: espaciado.md, paddingTop: 60 }}>
       <Text style={[tipografia.tituloGrande, { marginBottom: espaciado.md }]}>Ajustes</Text>
@@ -166,6 +220,10 @@ export default function AjustesScreen() {
       <Tarjeta>
         <Text style={tipografia.subtitulo}>{usuario.nombre}</Text>
         <Text style={[tipografia.cuerpoSuave, { marginTop: espaciado.xs }]}>{usuario.email}</Text>
+        <TouchableOpacity onPress={abrirModalPassword} style={styles.filaCambiarPassword}>
+          <Ionicons name="lock-closed-outline" size={16} color={colores.primario} />
+          <Text style={styles.enlaceCambiarPassword}>Cambiar contraseña</Text>
+        </TouchableOpacity>
       </Tarjeta>
 
       <Tarjeta>
@@ -246,6 +304,38 @@ export default function AjustesScreen() {
 
       <BotonPrincipal titulo="Salir de la familia" variante="secundario" onPress={confirmarSalirDeFamilia} />
       <BotonPrincipal titulo="Cerrar sesión" variante="secundario" onPress={cerrarSesion} />
+
+      <Modal visible={modalPasswordVisible} transparent animationType="fade" onRequestClose={() => setModalPasswordVisible(false)}>
+        <View style={styles.fondoModal}>
+          <View style={styles.tarjetaModal}>
+            <Text style={[tipografia.subtitulo, { marginBottom: espaciado.sm }]}>Cambiar contraseña</Text>
+            <CampoTexto
+              placeholder="Contraseña actual"
+              value={passwordActual}
+              onChangeText={setPasswordActual}
+              secureTextEntry
+            />
+            <CampoTexto
+              placeholder="Nueva contraseña"
+              value={passwordNueva}
+              onChangeText={setPasswordNueva}
+              secureTextEntry
+            />
+            <CampoTexto
+              placeholder="Confirmar nueva contraseña"
+              value={passwordConfirmar}
+              onChangeText={setPasswordConfirmar}
+              secureTextEntry
+            />
+            <BotonPrincipal
+              titulo={cambiandoPassword ? 'Guardando...' : 'Guardar'}
+              onPress={cambiarPassword}
+              disabled={cambiandoPassword}
+            />
+            <BotonPrincipal titulo="Cancelar" variante="secundario" onPress={() => setModalPasswordVisible(false)} />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -255,6 +345,30 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
     container: {
       flex: 1,
       backgroundColor: colores.fondo,
+    },
+    filaCambiarPassword: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: espaciado.sm,
+    },
+    enlaceCambiarPassword: {
+      ...tipografia.chico,
+      color: colores.primario,
+    },
+    fondoModal: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: espaciado.lg,
+    },
+    tarjetaModal: {
+      width: '100%',
+      maxWidth: 360,
+      backgroundColor: colores.superficie,
+      borderRadius: radios.lg,
+      padding: espaciado.lg,
     },
     filaCodigo: {
       flexDirection: 'row',

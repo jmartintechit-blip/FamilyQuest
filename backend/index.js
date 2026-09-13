@@ -698,6 +698,38 @@ app.post('/registro', async (req, res) => {
   res.status(201).json({ id: resultado.lastInsertRowid, nombre, email });
 });
 
+app.put('/usuarios/:id/password', verificarToken, async (req, res) => {
+  const { id } = req.params;
+  const { password_actual, password_nueva } = req.body;
+
+  if (req.usuario.id !== Number(id)) {
+    return res.status(403).json({ error: 'No puedes hacer esto en nombre de otro usuario' });
+  }
+
+  if (!password_actual || !password_nueva) {
+    return res.status(400).json({ error: 'La contraseña actual y la nueva son obligatorias' });
+  }
+
+  if (password_nueva.length < 8) {
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
+  }
+
+  const usuario = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(id);
+  if (!usuario) {
+    return res.status(404).json({ error: 'Usuario no encontrado' });
+  }
+
+  const coincide = await bcrypt.compare(password_actual, usuario.password_hash);
+  if (!coincide) {
+    return res.status(401).json({ error: 'La contraseña actual no es correcta' });
+  }
+
+  const nuevoHash = await bcrypt.hash(password_nueva, 10);
+  db.prepare('UPDATE usuarios SET password_hash = ? WHERE id = ?').run(nuevoHash, id);
+
+  res.json({ mensaje: 'Contraseña actualizada correctamente' });
+});
+
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 

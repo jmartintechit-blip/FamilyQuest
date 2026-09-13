@@ -338,20 +338,28 @@ app.post('/eventos', verificarToken, (req, res) => {
   // Avisamos al resto de la familia (no a quien acaba de hacer la tarea).
   // Va después de responder: si el envío de push tarda o falla, no afecta
   // a la app de quien marcó la tarea.
-  const otrosMiembros = db.prepare(
-    'SELECT push_token FROM usuarios WHERE familia_id = ? AND id != ?'
-  ).all(usuario.familia_id, usuario_id);
+  const contenidoNotificacion = `${usuario.nombre} completó "${tarea.nombre}" (${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos)`;
 
-  enviarPushNotificaciones(
-    otrosMiembros.map((m) => m.push_token),
-    esteEmojiSegunTipo(tarea.tipo) + ' ' + usuario.nombre,
-    `${tarea.nombre} (${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos)`
-  );
+  if (usuario.familia_id) {
+    const miembrosFamilia = db.prepare('SELECT id, push_token FROM usuarios WHERE familia_id = ?').all(usuario.familia_id);
+
+    const insertarNotificacion = db.prepare(
+      'INSERT INTO notificaciones (usuario_id, contenido) VALUES (?, ?)'
+    );
+    const guardarNotificaciones = db.transaction((miembros) => {
+      for (const miembro of miembros) {
+        insertarNotificacion.run(miembro.id, contenidoNotificacion);
+      }
+    });
+    guardarNotificaciones(miembrosFamilia);
+
+    enviarPushNotificaciones(
+      miembrosFamilia.filter((m) => m.id !== usuario_id).map((m) => m.push_token),
+      usuario.nombre,
+      `${tarea.nombre} (${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos)`
+    );
+  }
 });
-
-function esteEmojiSegunTipo(tipo) {
-  return tipo === 'positiva' ? '🌱' : '🥀';
-}
 
 app.put('/usuarios/push-token', verificarToken, (req, res) => {
   const { push_token } = req.body;
@@ -580,19 +588,29 @@ app.get('/familias/:id/mensajes', (req, res) => {
   res.json(mensajes);
 });
 
-app.get('/usuarios/:id/notificaciones', (req, res) => {
+app.get('/usuarios/:id/notificaciones', verificarToken, (req, res) => {
   const { id } = req.params;
+
+  if (req.usuario.id !== Number(id)) {
+    return res.status(403).json({ error: 'No puedes ver las notificaciones de otro usuario' });
+  }
+
   const notificaciones = db.prepare(
-    'SELECT * FROM notificaciones WHERE usuario_id = ? ORDER BY fecha_hora DESC'
+    'SELECT * FROM notificaciones WHERE usuario_id = ? ORDER BY fecha_hora DESC LIMIT 100'
   ).all(id);
 
   res.json(notificaciones);
 });
 
-app.put('/notificaciones/:id/leida', (req, res) => {
+app.put('/usuarios/:id/notificaciones/leer-todas', verificarToken, (req, res) => {
   const { id } = req.params;
-  db.prepare('UPDATE notificaciones SET leida = 1 WHERE id = ?').run(id);
-  res.json({ mensaje: 'Notificación marcada como leída' });
+
+  if (req.usuario.id !== Number(id)) {
+    return res.status(403).json({ error: 'No puedes hacer esto en nombre de otro usuario' });
+  }
+
+  db.prepare('UPDATE notificaciones SET leida = 1 WHERE usuario_id = ?').run(id);
+  res.json({ mensaje: 'Notificaciones marcadas como leídas' });
 });
 
 io.on('connection', (socket) => {

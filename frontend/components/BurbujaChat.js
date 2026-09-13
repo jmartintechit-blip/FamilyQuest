@@ -1,5 +1,4 @@
-import { Text, StyleSheet } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { Text, View, StyleSheet } from 'react-native';
 import { useTema } from '../context/TemaContext';
 
 function colorPorNombre(nombre, coloresAvatar) {
@@ -8,7 +7,9 @@ function colorPorNombre(nombre, coloresAvatar) {
 }
 
 function formatearHora(fechaHora) {
-  const fecha = new Date(fechaHora.replace(' ', 'T'));
+  // El backend guarda fecha_hora en UTC; hay que marcarlo con "Z" o Date lo
+  // interpretaría como hora local (mismo bug ya corregido en notificaciones).
+  const fecha = new Date(fechaHora.replace(' ', 'T') + 'Z');
   if (Number.isNaN(fecha.getTime())) return '';
   return fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
@@ -19,18 +20,18 @@ export default function BurbujaChat({ mensaje, esPropio }) {
   const coloresAvatar = [colores.primario, colores.acento, colores.dorado, colores.primarioOscuro];
 
   return (
-    <Animated.View entering={FadeInUp.duration(250)} style={[estilos.fila, esPropio && estilos.filaPropia]}>
+    <View style={[estilos.fila, esPropio && estilos.filaPropia]}>
       {!esPropio && (
-        <Animated.View style={[estilos.avatar, { backgroundColor: colorPorNombre(mensaje.autor, coloresAvatar) }]}>
+        <View style={[estilos.avatar, { backgroundColor: colorPorNombre(mensaje.autor, coloresAvatar) }]}>
           <Text style={estilos.iniciales}>{mensaje.autor.charAt(0).toUpperCase()}</Text>
-        </Animated.View>
+        </View>
       )}
-      <Animated.View style={[estilos.burbuja, esPropio ? estilos.burbujaPropia : estilos.burbujaAjena]}>
+      <View style={[estilos.burbuja, esPropio ? estilos.burbujaPropia : estilos.burbujaAjena]}>
         {!esPropio && <Text style={estilos.autor}>{mensaje.autor}</Text>}
         <Text style={[tipografia.cuerpo, esPropio && estilos.textoPropio]}>{mensaje.texto}</Text>
         <Text style={[estilos.hora, esPropio && estilos.horaPropia]}>{formatearHora(mensaje.fecha_hora)}</Text>
-      </Animated.View>
-    </Animated.View>
+      </View>
+    </View>
   );
 }
 

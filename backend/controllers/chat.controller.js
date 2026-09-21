@@ -3,10 +3,6 @@ const chatService = require('../services/chat.service');
 function enviarMensaje(req, res) {
   const { familia_id, usuario_id, texto } = req.body;
 
-  if (!familia_id || !usuario_id || !texto) {
-    return res.status(400).json({ error: 'familia_id, usuario_id y texto son obligatorios' });
-  }
-
   try {
     const io = req.app.get('io');
     const mensaje = chatService.enviarMensaje(io, {

@@ -3,14 +3,6 @@ const tareasService = require('../services/tareas.service');
 function crearTarea(req, res) {
   const { familia_id, nombre, puntos_valor, tipo } = req.body;
 
-  if (!familia_id || !nombre || puntos_valor === undefined || !tipo) {
-    return res.status(400).json({ error: 'Faltan datos obligatorios' });
-  }
-
-  if (tipo !== 'positiva' && tipo !== 'negativa') {
-    return res.status(400).json({ error: 'El tipo debe ser "positiva" o "negativa"' });
-  }
-
   try {
     const tarea = tareasService.crearTarea(req.usuario.id, { familia_id, nombre, puntos_valor, tipo });
     res.status(201).json(tarea);
@@ -35,10 +27,6 @@ function eliminarTarea(req, res) {
 
 function registrarEvento(req, res) {
   const { usuario_id, tarea_id } = req.body;
-
-  if (!usuario_id || !tarea_id) {
-    return res.status(400).json({ error: 'usuario_id y tarea_id son obligatorios' });
-  }
 
   try {
     const { respuesta, notificarEnSegundoPlano } = tareasService.registrarEvento({

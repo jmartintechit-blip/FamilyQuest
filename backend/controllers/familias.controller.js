@@ -1,13 +1,7 @@
 const familiasService = require('../services/familias.service');
 
 function crearFamilia(req, res) {
-  const { nombre } = req.body;
-
-  if (!nombre) {
-    return res.status(400).json({ error: 'El nombre de la familia es obligatorio ' });
-  }
-
-  const familia = familiasService.crearFamilia(nombre);
+  const familia = familiasService.crearFamilia(req.body.nombre);
   res.status(201).json(familia);
 }
 

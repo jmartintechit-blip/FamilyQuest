@@ -9,14 +9,8 @@ function obtenerCatalogoCosmeticos(req, res) {
 }
 
 function ponerNombre(req, res) {
-  const { nombre_mascota } = req.body;
-
-  if (!nombre_mascota || !nombre_mascota.trim()) {
-    return res.status(400).json({ error: 'El nombre de la mascota es obligatorio' });
-  }
-
   try {
-    const resultado = mascotaService.ponerNombre(req.params.id, nombre_mascota);
+    const resultado = mascotaService.ponerNombre(req.params.id, req.body.nombre_mascota);
     res.json(resultado);
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message });
@@ -43,10 +37,6 @@ function desbloquearEspecie(req, res) {
 
 function equiparCosmetico(req, res) {
   const { slot, cosmetico } = req.body;
-
-  if (!slot) {
-    return res.status(400).json({ error: 'Falta la categoría del complemento' });
-  }
 
   try {
     const resultado = mascotaService.equiparCosmetico(req.params.id, slot, cosmetico);

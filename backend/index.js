@@ -8,44 +8,9 @@ const configurarSocketIO = require('./socket');
 const { verificarToken } = require('./middleware/auth');
 const { obtenerFamiliaDeUsuario, verificarPerteneceAFamilia, verificarEsUnoMismo } = require('./middleware/familia');
 const authRoutes = require('./routes/auth.routes');
-
-// Envía notificaciones push a través del servicio de Expo. Si algún token no
-// es válido o el envío falla, simplemente lo registramos en consola: nunca
-// debe romper la petición que la disparó (marcar una tarea, etc.).
-async function enviarPushNotificaciones(tokens, titulo, cuerpo) {
-  const tokensValidos = tokens.filter(Boolean);
-  if (tokensValidos.length === 0) return;
-
-  try {
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(
-        tokensValidos.map((token) => ({ to: token, title: titulo, body: cuerpo }))
-      ),
-    });
-  } catch (error) {
-    console.log('No se pudieron enviar las notificaciones push', error.message);
-  }
-}
-
-const SEMANA_EN_MS = 7 * 24 * 60 * 60 * 1000;
-
-// El ranking se reinicia cada semana. No hay un cron corriendo en segundo
-// plano: en su lugar, cada vez que se toca a una familia comprobamos si ya
-// tocaba reiniciar (perezoso, pero suficiente para el tamaño de esta app).
-function revisarResetRanking(familiaId) {
-  const familia = db.prepare('SELECT ranking_ultimo_reset FROM familias WHERE id = ?').get(familiaId);
-  if (!familia) return;
-
-  const ultimoReset = new Date(familia.ranking_ultimo_reset.replace(' ', 'T') + 'Z');
-  const haPasadoUnaSemana = Date.now() - ultimoReset.getTime() >= SEMANA_EN_MS;
-
-  if (haPasadoUnaSemana) {
-    db.prepare('UPDATE usuarios SET puntos_totales = 0 WHERE familia_id = ?').run(familiaId);
-    db.prepare('UPDATE familias SET ranking_ultimo_reset = CURRENT_TIMESTAMP WHERE id = ?').run(familiaId);
-  }
-}
+const tareasRoutes = require('./routes/tareas.routes');
+const tareasService = require('./services/tareas.service');
+const { revisarResetRanking } = require('./services/familias.service');
 
 const app = express();
 const servidor = http.createServer(app);
@@ -77,74 +42,11 @@ const COSMETICOS_MASCOTA = {
   bufanda: { slot: 'cuello', costo: 60 },
 };
 
-// Catálogo de tareas domésticas que se le da a cada familia nueva, para que
-// no arranquen con la lista en blanco. Cada una se puede editar o borrar
-// después desde la app — esto es solo un punto de partida generoso.
-const TAREAS_PREDEFINIDAS = [
-  // --- Positivas: limpieza y orden ---
-  { nombre: 'Hacer la cama', puntos_valor: 3, tipo: 'positiva' },
-  { nombre: 'Lavar los platos', puntos_valor: 5, tipo: 'positiva' },
-  { nombre: 'Poner el lavavajillas', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Sacar la basura', puntos_valor: 3, tipo: 'positiva' },
-  { nombre: 'Sacar el reciclaje', puntos_valor: 3, tipo: 'positiva' },
-  { nombre: 'Poner una lavadora', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Tender la ropa', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Doblar y guardar la ropa', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Planchar la ropa', puntos_valor: 5, tipo: 'positiva' },
-  { nombre: 'Pasar la aspiradora', puntos_valor: 5, tipo: 'positiva' },
-  { nombre: 'Barrer el suelo', puntos_valor: 3, tipo: 'positiva' },
-  { nombre: 'Fregar el suelo', puntos_valor: 6, tipo: 'positiva' },
-  { nombre: 'Limpiar el baño', puntos_valor: 7, tipo: 'positiva' },
-  { nombre: 'Limpiar la cocina', puntos_valor: 6, tipo: 'positiva' },
-  { nombre: 'Quitar el polvo', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Cambiar las sábanas', puntos_valor: 5, tipo: 'positiva' },
-  { nombre: 'Ordenar la habitación', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Ordenar el salón', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Organizar el armario', puntos_valor: 5, tipo: 'positiva' },
-  { nombre: 'Limpiar los cristales', puntos_valor: 6, tipo: 'positiva' },
-  // --- Positivas: cocina y compra ---
-  { nombre: 'Poner la mesa', puntos_valor: 2, tipo: 'positiva' },
-  { nombre: 'Recoger la mesa', puntos_valor: 2, tipo: 'positiva' },
-  { nombre: 'Cocinar la comida', puntos_valor: 8, tipo: 'positiva' },
-  { nombre: 'Preparar la cena', puntos_valor: 8, tipo: 'positiva' },
-  { nombre: 'Preparar el desayuno', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Hacer la compra semanal', puntos_valor: 6, tipo: 'positiva' },
-  { nombre: 'Organizar la nevera', puntos_valor: 4, tipo: 'positiva' },
-  // --- Positivas: mascotas, plantas y exterior ---
-  { nombre: 'Pasear al perro', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Dar de comer a la mascota', puntos_valor: 3, tipo: 'positiva' },
-  { nombre: 'Limpiar después de la mascota', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Regar las plantas', puntos_valor: 2, tipo: 'positiva' },
-  { nombre: 'Cortar el césped', puntos_valor: 7, tipo: 'positiva' },
-  { nombre: 'Limpiar el coche', puntos_valor: 6, tipo: 'positiva' },
-  // --- Positivas: estudio y responsabilidad ---
-  { nombre: 'Hacer los deberes', puntos_valor: 5, tipo: 'positiva' },
-  { nombre: 'Estudiar una hora', puntos_valor: 5, tipo: 'positiva' },
-  { nombre: 'Leer un libro', puntos_valor: 4, tipo: 'positiva' },
-  { nombre: 'Ayudar con los deberes a un hermano', puntos_valor: 6, tipo: 'positiva' },
-  { nombre: 'Cuidar de un familiar', puntos_valor: 7, tipo: 'positiva' },
-  { nombre: 'Ser puntual toda la semana', puntos_valor: 6, tipo: 'positiva' },
-  // --- Negativas ---
-  { nombre: 'Dejar platos sucios', puntos_valor: -4, tipo: 'negativa' },
-  { nombre: 'Dejar la cama sin hacer', puntos_valor: -2, tipo: 'negativa' },
-  { nombre: 'Dejar la ropa tirada', puntos_valor: -3, tipo: 'negativa' },
-  { nombre: 'No sacar la basura', puntos_valor: -3, tipo: 'negativa' },
-  { nombre: 'Dejar el baño desordenado', puntos_valor: -4, tipo: 'negativa' },
-  { nombre: 'Llegar tarde sin avisar', puntos_valor: -5, tipo: 'negativa' },
-  { nombre: 'Pelearse con un hermano', puntos_valor: -6, tipo: 'negativa' },
-  { nombre: 'No hacer los deberes', puntos_valor: -5, tipo: 'negativa' },
-  { nombre: 'Contestar mal', puntos_valor: -4, tipo: 'negativa' },
-  { nombre: 'Mentir', puntos_valor: -8, tipo: 'negativa' },
-  { nombre: 'Dejar luces encendidas sin necesidad', puntos_valor: -2, tipo: 'negativa' },
-  { nombre: 'Perder o romper algo por descuido', puntos_valor: -5, tipo: 'negativa' },
-  { nombre: 'No cuidar a la mascota', puntos_valor: -6, tipo: 'negativa' },
-  { nombre: 'Usar el móvil en la mesa', puntos_valor: -3, tipo: 'negativa' },
-];
-
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 app.use(authRoutes);
+app.use(tareasRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hola Juan! Tu servidor está funcionando');
@@ -165,15 +67,7 @@ app.post('/familias', verificarToken, (req, res) => {
     const resultado = stmt.run(nombre, codigo);
     const familiaId = resultado.lastInsertRowid;
 
-    const insertarTarea = db.prepare(
-      'INSERT INTO tareas (familia_id, nombre, puntos_valor, tipo) VALUES (?, ?, ?, ?)'
-    );
-    const sembrarTareas = db.transaction((tareas) => {
-      for (const tarea of tareas) {
-        insertarTarea.run(familiaId, tarea.nombre, tarea.puntos_valor, tarea.tipo);
-      }
-    });
-    sembrarTareas(TAREAS_PREDEFINIDAS);
+    tareasService.sembrarTareasPredefinidas(familiaId);
 
     res.status(201).json({ id: familiaId, nombre, codigo_invitacion: codigo });
 });
@@ -222,133 +116,6 @@ app.put('/usuarios/:id/salir-familia', verificarToken, (req, res) => {
     db.prepare('UPDATE usuarios SET familia_id = NULL, puntos_totales = 0 WHERE id = ?').run(id);
 
     res.json({ mensaje: 'Has salido de la familia' });
-});
-
-app.post('/tareas', verificarToken, (req, res) => {
-  const { familia_id, nombre, puntos_valor, tipo } = req.body;
-
-  if (!familia_id || !nombre || puntos_valor === undefined || !tipo) {
-    return res.status(400).json({ error: 'Faltan datos obligatorios' });
-  }
-
-  if (tipo !== 'positiva' && tipo !== 'negativa') {
-    return res.status(400).json({ error: 'El tipo debe ser "positiva" o "negativa"' });
-  }
-
-  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(familia_id)) {
-    return res.status(403).json({ error: 'No perteneces a esta familia' });
-  }
-
-  const stmt = db.prepare('INSERT INTO tareas (familia_id, nombre, puntos_valor, tipo) VALUES (?, ?, ?, ?)');
-  const resultado = stmt.run(familia_id, nombre, puntos_valor, tipo);
-
-  res.status(201).json({ id: resultado.lastInsertRowid, familia_id, nombre, puntos_valor, tipo });
-});
-
-app.get('/familias/:id/tareas', verificarToken, (req, res) => {
-  const { id } = req.params;
-
-  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
-    return res.status(403).json({ error: 'No perteneces a esta familia' });
-  }
-
-  const tareas = db.prepare('SELECT * FROM tareas WHERE familia_id = ? ORDER BY tipo DESC, id DESC').all(id);
-  res.json(tareas);
-});
-
-app.delete('/tareas/:id', verificarToken, (req, res) => {
-  const { id } = req.params;
-
-  const tarea = db.prepare('SELECT * FROM tareas WHERE id = ?').get(id);
-  if (!tarea) {
-    return res.status(404).json({ error: 'Tarea no encontrada' });
-  }
-
-  const usuario = db.prepare('SELECT familia_id FROM usuarios WHERE id = ?').get(req.usuario.id);
-  if (!usuario || usuario.familia_id !== tarea.familia_id) {
-    return res.status(403).json({ error: 'Esta tarea no pertenece a tu familia' });
-  }
-
-  db.prepare('DELETE FROM tareas WHERE id = ?').run(id);
-  res.json({ mensaje: 'Tarea eliminada' });
-});
-
-app.post('/eventos', verificarToken, (req, res) => {
-  const { usuario_id, tarea_id } = req.body;
-
-  if (!usuario_id || !tarea_id) {
-    return res.status(400).json({ error: 'usuario_id y tarea_id son obligatorios' });
-  }
-
-  const tarea = db.prepare('SELECT * FROM tareas WHERE id = ?').get(tarea_id);
-  if (!tarea) {
-    return res.status(404).json({ error: 'Tarea no encontrada' });
-  }
-
-  const usuario = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(usuario_id);
-  if (!usuario) {
-    return res.status(404).json({ error: 'Usuario no encontrado' });
-  }
-
-  const familiaSolicitante = obtenerFamiliaDeUsuario(req.usuario.id);
-  if (!familiaSolicitante || familiaSolicitante !== usuario.familia_id || familiaSolicitante !== tarea.familia_id) {
-    return res.status(403).json({ error: 'Esta tarea o este usuario no pertenecen a tu familia' });
-  }
-
-  if (usuario.familia_id) revisarResetRanking(usuario.familia_id);
-
-  const insertarEvento = db.prepare(
-    'INSERT INTO eventos (usuario_id, tarea_id, puntos_aplicados, registrado_por) VALUES (?, ?, ?, ?)'
-  );
-  const resultado = insertarEvento.run(usuario_id, tarea_id, tarea.puntos_valor, req.usuario.id);
-
-  db.prepare('UPDATE usuarios SET puntos_totales = puntos_totales + ? WHERE id = ?')
-    .run(tarea.puntos_valor, usuario_id);
-
-  const cambioSalud = tarea.tipo === 'positiva' ? 3 : -5;
-
-  db.prepare(`
-    UPDATE familias
-    SET salud_mascota = MAX(0, MIN(100, salud_mascota + ?))
-    WHERE id = (SELECT familia_id FROM usuarios WHERE id = ?)
-  `).run(cambioSalud, usuario_id);
-
-  // Las monedas compartidas suben y bajan igual que los puntos (nunca por debajo de 0)
-  db.prepare(`
-    UPDATE familias
-    SET monedas = MAX(0, monedas + ?)
-    WHERE id = (SELECT familia_id FROM usuarios WHERE id = ?)
-  `).run(tarea.puntos_valor, usuario_id);
-
-  res.status(201).json({
-    id: resultado.lastInsertRowid,
-    mensaje: `${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos aplicados a ${usuario.nombre}`
-  });
-
-  // Avisamos al resto de la familia (no a quien acaba de hacer la tarea).
-  // Va después de responder: si el envío de push tarda o falla, no afecta
-  // a la app de quien marcó la tarea.
-  const contenidoNotificacion = `${usuario.nombre} completó "${tarea.nombre}" (${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos)`;
-
-  if (usuario.familia_id) {
-    const miembrosFamilia = db.prepare('SELECT id, push_token FROM usuarios WHERE familia_id = ?').all(usuario.familia_id);
-
-    const insertarNotificacion = db.prepare(
-      'INSERT INTO notificaciones (usuario_id, contenido) VALUES (?, ?)'
-    );
-    const guardarNotificaciones = db.transaction((miembros) => {
-      for (const miembro of miembros) {
-        insertarNotificacion.run(miembro.id, contenidoNotificacion);
-      }
-    });
-    guardarNotificaciones(miembrosFamilia);
-
-    enviarPushNotificaciones(
-      miembrosFamilia.filter((m) => m.id !== usuario_id).map((m) => m.push_token),
-      usuario.nombre,
-      `${tarea.nombre} (${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos)`
-    );
-  }
 });
 
 app.get('/familias/:id/ranking', verificarToken, (req, res) => {

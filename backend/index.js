@@ -9,8 +9,7 @@ const { verificarToken } = require('./middleware/auth');
 const { obtenerFamiliaDeUsuario, verificarPerteneceAFamilia, verificarEsUnoMismo } = require('./middleware/familia');
 const authRoutes = require('./routes/auth.routes');
 const tareasRoutes = require('./routes/tareas.routes');
-const tareasService = require('./services/tareas.service');
-const { revisarResetRanking } = require('./services/familias.service');
+const familiasRoutes = require('./routes/familias.routes');
 
 const app = express();
 const servidor = http.createServer(app);
@@ -47,106 +46,10 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use(authRoutes);
 app.use(tareasRoutes);
+app.use(familiasRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hola Juan! Tu servidor está funcionando');
-});
-
-function generarCodigo() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
-app.post('/familias', verificarToken, (req, res) => {
-    const { nombre } = req.body;
-
-    if (!nombre) {
-        return res.status(400).json({ error: 'El nombre de la familia es obligatorio ' });
-    }
-
-    const codigo = generarCodigo();
-    const stmt = db.prepare('INSERT INTO familias (nombre, codigo_invitacion) VALUES (?, ?)');
-    const resultado = stmt.run(nombre, codigo);
-    const familiaId = resultado.lastInsertRowid;
-
-    tareasService.sembrarTareasPredefinidas(familiaId);
-
-    res.status(201).json({ id: familiaId, nombre, codigo_invitacion: codigo });
-});
-
-app.post('/familias/unirse', verificarToken, (req, res) => {
-    const { usuario_id, codigo_invitacion } = req.body;
-
-    if (req.usuario.id !== Number(usuario_id)) {
-        return res.status(403).json({ error: 'No puedes hacer esto en nombre de otro usuario' });
-    }
-
-    const familia = db.prepare('SELECT * FROM familias WHERE codigo_invitacion = ?').get(codigo_invitacion);
-
-    if (!familia) {
-        return res.status(404).json({ error: 'Código de invitación no válido' });
-    }
-
-    db.prepare('UPDATE usuarios SET familia_id = ? WHERE id = ?').run(familia.id, usuario_id);
-
-    res.json({
-        mensaje: `Usuario unido a la familia "${familia.nombre}" correctamente`,
-        familia_id: familia.id
-    });
-});
-
-app.get('/familias/:id/usuarios', verificarToken, (req, res) => {
-    const { id } = req.params;
-
-    if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
-        return res.status(403).json({ error: 'No perteneces a esta familia' });
-    }
-
-    const usuarios = db.prepare(
-        'SELECT id, nombre, email, puntos_totales, fecha_creacion FROM usuarios WHERE familia_id = ? ORDER BY puntos_totales DESC'
-    ).all(id);
-    res.json(usuarios);
-});
-
-app.put('/usuarios/:id/salir-familia', verificarToken, (req, res) => {
-    const { id } = req.params;
-
-    if (req.usuario.id !== Number(id)) {
-        return res.status(403).json({ error: 'No puedes hacer esto en nombre de otro usuario' });
-    }
-
-    db.prepare('UPDATE usuarios SET familia_id = NULL, puntos_totales = 0 WHERE id = ?').run(id);
-
-    res.json({ mensaje: 'Has salido de la familia' });
-});
-
-app.get('/familias/:id/ranking', verificarToken, (req, res) => {
-  const { id } = req.params;
-
-  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
-    return res.status(403).json({ error: 'No perteneces a esta familia' });
-  }
-
-  revisarResetRanking(id);
-  const ranking = db.prepare(
-    'SELECT nombre, puntos_totales FROM usuarios WHERE familia_id = ? ORDER BY puntos_totales DESC'
-  ).all(id);
-  res.json(ranking);
-});
-
-app.get('/familias/:id', verificarToken, (req, res) => {
-  const { id } = req.params;
-
-  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
-    return res.status(403).json({ error: 'No perteneces a esta familia' });
-  }
-
-  revisarResetRanking(id);
-  const familia = db.prepare('SELECT * FROM familias WHERE id = ?').get(id);
-
-  if (!familia) {
-    return res.status(404).json({ error: 'Familia no encontrada' });
-  }
-
-  res.json(familia);
 });
 
 app.put('/familias/:id/mascota', verificarToken, (req, res) => {

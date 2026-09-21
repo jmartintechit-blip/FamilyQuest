@@ -2,94 +2,109 @@
 
 # 🌱 FamilyQuest
 
-**Gestión de tareas del hogar para toda la familia — con puntos, ranking semanal, chat en tiempo real y una mascota virtual que refleja lo bien que la familia se organiza.**
+**Household task management for the whole family — with points, a weekly ranking, real-time chat, and a virtual pet that reflects how well the family is keeping up.**
 
 ![React Native](https://img.shields.io/badge/React_Native-0.86-61DAFB?style=flat-square&logo=react&logoColor=white)
 ![Expo](https://img.shields.io/badge/Expo-57-000020?style=flat-square&logo=expo&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-Express_5-339933?style=flat-square&logo=node.js&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003B57?style=flat-square&logo=sqlite&logoColor=white)
-![Socket.IO](https://img.shields.io/badge/Socket.IO-tiempo_real-010101?style=flat-square&logo=socket.io&logoColor=white)
-![Licencia](https://img.shields.io/badge/Licencia-MIT-green?style=flat-square)
+![Socket.IO](https://img.shields.io/badge/Socket.IO-real_time-010101?style=flat-square&logo=socket.io&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+
+**English · [Español](README.es.md)**
 
 </div>
 
 ---
 
-Pensada para que la use cualquier miembro de la familia sin importar su edad o soltura con la tecnología: interfaz clara, botones grandes, sin jerga técnica, y con una sección de ayuda integrada en la propia app.
+Built so that any family member can use it regardless of age or tech-savviness: clear UI, big buttons, no jargon, and a help section built right into the app.
 
-## Índice
+## Table of contents
 
-- [Qué hace](#qué-hace)
-- [Capturas](#capturas)
-- [Stack técnico](#stack-técnico)
-- [Estructura del proyecto](#estructura-del-proyecto)
-- [Puesta en marcha](#puesta-en-marcha)
-- [Seguridad](#seguridad)
-- [Cómo funciona por dentro](#cómo-funciona-por-dentro)
-- [Hoja de ruta](#hoja-de-ruta)
-- [Licencia](#licencia)
+- [What it does](#what-it-does)
+- [Screenshots](#screenshots)
+- [Tech stack](#tech-stack)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Security](#security)
+- [How it works under the hood](#how-it-works-under-the-hood)
+- [Roadmap](#roadmap)
+- [License](#license)
 
-## Qué hace
+## What it does
 
-Cada familia tiene su propio espacio privado, al que se accede creando una cuenta y uniéndose con un código de invitación.
+Each family gets its own private space, accessed by creating an account and joining with an invite code.
 
 | | |
 |---|---|
-| ✅ **Tareas domésticas con puntos** | Catálogo de más de 50 tareas predefinidas (limpieza, cocina, estudio, cuidado de mascotas...) que suman o restan puntos al completarlas. Con buscador, filtros y creación de tareas propias desde una pantalla dedicada. |
-| 🏆 **Ranking semanal** | Compite en equipo por ver quién suma más puntos — se reinicia automáticamente cada semana para que siempre haya una competición fresca. |
-| 🐾 **Mascota virtual compartida** | Su salud sube con las tareas positivas y baja con las negativas: es un termómetro visual de cómo va la familia. Personalizable con 6 especies y varios complementos (sombreros, gafas, accesorios), desbloqueables con monedas que la familia gana jugando. |
-| 🔔 **Notificaciones de actividad** | Un feed dedicado avisa a toda la familia cuando alguien completa una tarea, con notificaciones locales y push. |
-| 💬 **Chat familiar en tiempo real** | Vía WebSockets (Socket.IO), con burbujas de mensaje, scroll automático y estado vacío cuidado. |
-| 🌗 **Modo claro/oscuro y tamaño de letra ajustable** | Pensado para que sea cómoda de leer para cualquier edad. |
-| 👨‍👩‍👧‍👦 **Gestión de familia** | Ver miembros y sus puntos, copiar o compartir el código de invitación con un botón, salir de la familia cuando se quiera. |
+| ✅ **Household tasks with points** | A catalog of 50+ predefined tasks (cleaning, cooking, studying, pet care...) that add or subtract points when completed. Search, filters, and creating your own tasks from a dedicated screen. |
+| 🏆 **Weekly ranking** | Compete as a team to see who scores the most points — it resets automatically every week so there's always a fresh competition. |
+| 🐾 **Shared virtual pet** | Its health rises with positive tasks and drops with negative ones: a visual thermometer for how the family is doing. Customizable with 6 species and several accessories (hats, glasses, accessories), unlockable with coins the family earns by playing. |
+| 🔔 **Activity notifications** | A dedicated feed lets the whole family know when someone completes a task, with local and push notifications. |
+| 💬 **Real-time family chat** | Over WebSockets (Socket.IO), with message bubbles, auto-scroll, and a proper empty state. |
+| 🌗 **Light/dark mode and adjustable font size** | Built to be comfortable to read at any age. |
+| 👨‍👩‍👧‍👦 **Family management** | See members and their points, copy or share the invite code with one tap, leave the family whenever you want. |
 
-## Capturas
+## Screenshots
 
 <div align="center">
-<img src="docs/screenshots/inicio.png" width="180" alt="Inicio: mascota y tareas del día" />
-<img src="docs/screenshots/tareas.png" width="180" alt="Tareas: búsqueda y filtros" />
-<img src="docs/screenshots/ranking.png" width="180" alt="Ranking semanal" />
-<img src="docs/screenshots/chat.png" width="180" alt="Chat familiar" />
-<img src="docs/screenshots/notificaciones.png" width="180" alt="Notificaciones de actividad" />
-<img src="docs/screenshots/ajustes.png" width="180" alt="Ajustes y gestión de familia" />
+<img src="docs/screenshots/inicio.png" width="180" alt="Home: pet and today's tasks" />
+<img src="docs/screenshots/tareas.png" width="180" alt="Tasks: search and filters" />
+<img src="docs/screenshots/ranking.png" width="180" alt="Weekly ranking" />
+<img src="docs/screenshots/chat.png" width="180" alt="Family chat" />
+<img src="docs/screenshots/notificaciones.png" width="180" alt="Activity notifications" />
+<img src="docs/screenshots/ajustes.png" width="180" alt="Settings and family management" />
 </div>
 
-## Stack técnico
+## Tech stack
 
 | | |
 |---|---|
-| **Frontend** | React Native + Expo (un único cliente para iOS, Android y web) |
-| **Navegación** | React Navigation (pestañas + stack), con un botón central flotante para la acción más habitual |
-| **Animaciones** | React Native Reanimated (mascota, transiciones de puntos, chat) |
-| **Ilustración** | react-native-svg (mascota dibujada a mano, sin imágenes externas) |
-| **Backend** | Node.js + Express 5 |
-| **Base de datos** | SQLite (`better-sqlite3`) |
-| **Autenticación** | JWT + bcrypt, con autorización por familia en cada endpoint |
-| **Tiempo real** | Socket.IO |
-| **Notificaciones** | expo-notifications (con stub sin operación en la build web) |
+| **Frontend** | React Native + Expo (a single client for iOS, Android, and web) |
+| **Navigation** | React Navigation (tabs + stack), with a floating center button for the most common action |
+| **Animations** | React Native Reanimated (pet, point transitions, chat) |
+| **Illustration** | react-native-svg (hand-drawn pet, no external images) |
+| **Backend** | Node.js + Express 5, organized in layers (routes / controllers / services) |
+| **Validation** | Zod, one schema per endpoint |
+| **Database** | SQLite (`better-sqlite3`) |
+| **Auth** | JWT + bcrypt, with per-family authorization on every endpoint |
+| **Real-time** | Socket.IO |
+| **Notifications** | expo-notifications (with a no-op stub on the web build) |
 
-## Estructura del proyecto
+## Project structure
 
 ```
 app-familia/
-├── backend/                 API REST + WebSocket
-│   ├── db.js                 Esquema de la base de datos y migraciones
-│   └── index.js               Rutas, autenticación, lógica de negocio
-└── frontend/                App de React Native (Expo)
-    ├── components/            Componentes reutilizables (mascota, tareas, chat...)
-    ├── context/                Estado global: sesión y tema (React Context)
-    ├── navigation/             Navegación por pestañas
-    ├── screens/                Una pantalla = un archivo
-    └── utils/                  Notificaciones y utilidades
+├── backend/                    REST API + WebSocket, organized in layers
+│   ├── index.js                  Bootstrap: Express, global middleware, mounts the routers
+│   ├── socket.js                  Socket.IO handler (connection, per-family rooms)
+│   ├── db/
+│   │   └── conexion.js              SQLite connection, schema, and migrations
+│   ├── middleware/
+│   │   ├── auth.js                   JWT verification
+│   │   ├── familia.js                 Family-membership / "yourself only" checks
+│   │   └── validar.js                 Wraps a Zod schema as Express middleware
+│   ├── schemas/                    Zod validation schemas, one per resource
+│   ├── routes/                     Endpoints grouped by resource
+│   ├── controllers/                 Orchestrate the request and shape the response
+│   └── services/                    Business logic and data access
+└── frontend/                   React Native (Expo) app
+    ├── components/                Reusable components (pet, tasks, chat...)
+    ├── context/                    Global state: session and theme (React Context)
+    ├── navigation/                 Tab navigation
+    ├── screens/                    One screen = one file
+    └── utils/                      Notifications and utilities
 ```
 
-## Puesta en marcha
+Each backend resource (auth, tareas, familias, chat, mascota, notificaciones) follows the same pattern: `routes/` defines the endpoints and applies the auth/validation middleware, `controllers/` pulls data out of the request and shapes the response, and `services/` holds all the business logic and database queries. An endpoint that needs work from several domains at once (completing a task touches points, pet health, and notifications, for instance) has the main resource's service call into the other services — logic is never duplicated.
 
-### Requisitos
+## Getting started
 
-- [Node.js](https://nodejs.org/) 18 o superior
-- La app [Expo Go](https://expo.dev/go) instalada en tu móvil (o un emulador de iOS/Android)
-- Backend y móvil conectados a la **misma red WiFi**
+### Requirements
+
+- [Node.js](https://nodejs.org/) 18 or higher
+- The [Expo Go](https://expo.dev/go) app on your phone (or an iOS/Android emulator)
+- Backend and phone on the **same WiFi network**
 
 ### 1. Backend
 
@@ -98,19 +113,19 @@ cd backend
 npm install
 ```
 
-Crea un archivo `.env` en `backend/` con una clave secreta para firmar los tokens de sesión:
+Create a `.env` file in `backend/` with a secret key to sign session tokens:
 
 ```
-JWT_SECRET=escribe-aqui-cualquier-cadena-larga-y-aleatoria
+JWT_SECRET=write-any-long-random-string-here
 ```
 
-Arranca el servidor:
+Start the server:
 
 ```bash
 node index.js
 ```
 
-Deberías ver `Servidor escuchando en http://localhost:3000`.
+You should see `Servidor escuchando en http://localhost:3000`.
 
 ### 2. Frontend
 
@@ -119,49 +134,42 @@ cd frontend
 npm install
 ```
 
-Busca tu IP local (en Windows: `ipconfig`, en macOS/Linux: `ifconfig` o `ip a`) y actualízala en `frontend/constants/config.js`:
+Find your local IP (Windows: `ipconfig`; macOS/Linux: `ifconfig` or `ip a`) and update it in `frontend/constants/config.js`:
 
 ```js
-export const URL_BASE = 'http://TU_IP_LOCAL:3000';
+export const URL_BASE = 'http://YOUR_LOCAL_IP:3000';
 ```
 
-Arranca la app:
+Start the app:
 
 ```bash
 npx expo start
 ```
 
-Escanea el código QR con la app **Expo Go** desde tu móvil (misma red WiFi que el backend).
+Scan the QR code with the **Expo Go** app on your phone (same WiFi network as the backend).
 
-> Por ahora la app se distribuye con Expo Go, ideal para desarrollo y para probarla en familia. El siguiente paso natural es empaquetarla con [EAS Build](https://docs.expo.dev/build/introduction/) para generar un `.apk`/`.ipa` instalable de forma independiente — ver [Hoja de ruta](#hoja-de-ruta).
+> Right now the app ships through Expo Go, which is great for development and testing with the family. The natural next step is packaging it with [EAS Build](https://docs.expo.dev/build/introduction/) to produce a standalone installable `.apk`/`.ipa` — see [Roadmap](#roadmap).
 
-## Seguridad
+## Security
 
-Cada endpoint que lee o modifica datos de una familia comprueba, en el servidor, que el usuario autenticado (a partir de su JWT) realmente pertenece a esa familia — no basta con conocer un `familia_id` o `usuario_id` para acceder a sus datos. Esto cubre tareas, ranking, mascota, cosméticos, chat y notificaciones. Las contraseñas se guardan con `bcrypt` y nunca se exponen en ninguna respuesta de la API.
+Every endpoint that reads or modifies a family's data checks, server-side, that the authenticated user (from their JWT) actually belongs to that family — knowing a `familia_id` or `usuario_id` isn't enough to access its data. This covers tasks, ranking, pet, cosmetics, chat, and notifications. Passwords are stored with `bcrypt` and never exposed in any API response. Every endpoint's input is validated with [Zod](https://zod.dev/) before it reaches business logic.
 
-## Cómo funciona por dentro
+## How it works under the hood
 
-- **Sesión persistente**: el token JWT se guarda en el dispositivo (`AsyncStorage`), así que no hace falta iniciar sesión cada vez que se abre la app.
-- **Tema dinámico**: colores y tipografía viven en un `Context` (`TemaContext`) en vez de estar fijados por pantalla, para poder cambiar de modo claro/oscuro y tamaño de letra en caliente.
-- **Ranking semanal sin cron**: no hay ningún proceso en segundo plano — cada vez que se consulta la familia se comprueba si ya tocaba reiniciar el ranking (perezoso, pero suficiente para el tamaño de la app).
-- **Notificaciones locales vs. push**: los recordatorios y el aviso al completar una tarea son notificaciones locales (no necesitan servidor). El aviso en tiempo real a otros miembros de la familia está preparado en el backend, pero requiere vincular el proyecto a EAS (Expo Application Services) para funcionar de verdad fuera de Expo Go.
+- **Persistent session**: the JWT is stored on the device (`AsyncStorage`), so there's no need to log in every time the app opens.
+- **Dynamic theme**: colors and typography live in a `Context` (`TemaContext`) instead of being hardcoded per screen, so light/dark mode and font size can change on the fly.
+- **Weekly ranking without a cron job**: there's no background process — every time a family is read, it checks whether a reset was due (lazy, but enough for the size of this app).
+- **Local vs. push notifications**: reminders and the "task completed" alert are local notifications (no server needed). Real-time alerts to other family members are wired up in the backend, but need the project linked to EAS (Expo Application Services) to actually work outside of Expo Go.
 
-## Hoja de ruta
+## Roadmap
 
-- [ ] Rol de administrador familiar (permisos sobre tareas y miembros)
-- [ ] Historial de tareas completadas
-- [ ] Notificaciones push reales entre miembros de la familia (requiere EAS)
-- [ ] Onboarding para usuarios nuevos
-- [ ] Build instalable con EAS (`.apk` / `.ipa`)
+- [ ] Family admin role (permissions over tasks and members)
+- [ ] History of completed tasks
+- [ ] Real push notifications between family members (requires EAS)
+- [ ] Onboarding for new users
+- [ ] Installable build with EAS (`.apk` / `.ipa`)
+- [ ] Automated tests for the backend services
 
-## Licencia
+## License
 
-Licencia MIT © 2026 Juan Nadales. Ver [`LICENSE`](LICENSE) para el texto completo.
-
----
-
-<div align="center">
-
-Proyecto personal de aprendizaje, construido paso a paso.
-
-</div>
+MIT License © 2026 Juan Nadales. See [`LICENSE`](LICENSE) for the full text.

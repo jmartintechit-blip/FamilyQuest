@@ -3,35 +3,12 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
-const db = require('./db');
+const db = require('./db/conexion');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-
-// Devuelve el familia_id de un usuario, o null si no existe o no tiene
-// familia. Se usa para comprobar que quien hace la petición realmente
-// pertenece a la familia que está intentando leer o modificar.
-function obtenerFamiliaDeUsuario(usuarioId) {
-  const usuario = db.prepare('SELECT familia_id FROM usuarios WHERE id = ?').get(usuarioId);
-  return usuario ? usuario.familia_id : null;
-}
-
-function verificarToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Token no proporcionado' });
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  try {
-    const datos = jwt.verify(token, process.env.JWT_SECRET);
-    req.usuario = datos;
-    next();
-  } catch (error) {
-    return res.status(403).json({ error: 'Token inválido o expirado' });
-  }
-}
+const configurarSocketIO = require('./socket');
+const { verificarToken } = require('./middleware/auth');
+const { obtenerFamiliaDeUsuario, verificarPerteneceAFamilia, verificarEsUnoMismo } = require('./middleware/familia');
 
 // Envía notificaciones push a través del servicio de Expo. Si algún token no
 // es válido o el envío falla, simplemente lo registramos en consola: nunca
@@ -665,18 +642,7 @@ app.put('/usuarios/:id/notificaciones/leer-todas', verificarToken, (req, res) =>
   res.json({ mensaje: 'Notificaciones marcadas como leídas' });
 });
 
-io.on('connection', (socket) => {
-  console.log('Alguien se ha conectado:', socket.id);
-
-  socket.on('unirse_familia', (familia_id) => {
-    socket.join(`familia_${familia_id}`);
-    console.log(`Socket ${socket.id} se unió a familia_${familia_id}`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Alguien se ha desconectado:', socket.id);
-  });
-});
+configurarSocketIO(io);
 
 app.post('/registro', async (req, res) => {
   const { nombre, email, password } = req.body;

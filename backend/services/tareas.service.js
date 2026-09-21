@@ -3,6 +3,7 @@ const { crearErrorHttp } = require('./errores');
 const { obtenerFamiliaDeUsuario } = require('../middleware/familia');
 const { revisarResetRanking } = require('./familias.service');
 const mascotaService = require('./mascota.service');
+const notificacionesService = require('./notificaciones.service');
 
 // Catálogo de tareas domésticas que se le da a cada familia nueva, para que
 // no arranquen con la lista en blanco. Cada una se puede editar o borrar
@@ -111,44 +112,7 @@ function eliminarTarea(tareaId, usuarioSolicitanteId) {
 // --- Registrar un evento (completar una tarea) ---
 // Toca varios dominios a la vez (puntos/ranking, salud y monedas de la
 // mascota, notificaciones): registrarEvento() orquesta y delega en
-// mascotaService para su parte. La notificación de abajo aún no tiene
-// servicio propio — se mueve a notificaciones.service.js en su paso.
-
-// TODO(paso notificaciones): mover a notificaciones.service.js
-async function notificarEventoTarea(usuario, tarea) {
-  const contenidoNotificacion = `${usuario.nombre} completó "${tarea.nombre}" (${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos)`;
-
-  const miembrosFamilia = db.prepare('SELECT id, push_token FROM usuarios WHERE familia_id = ?').all(usuario.familia_id);
-
-  const insertarNotificacion = db.prepare(
-    'INSERT INTO notificaciones (usuario_id, contenido) VALUES (?, ?)'
-  );
-  const guardarNotificaciones = db.transaction((miembros) => {
-    for (const miembro of miembros) {
-      insertarNotificacion.run(miembro.id, contenidoNotificacion);
-    }
-  });
-  guardarNotificaciones(miembrosFamilia);
-
-  const tokensDestino = miembrosFamilia.filter((m) => m.id !== usuario.id).map((m) => m.push_token).filter(Boolean);
-  if (tokensDestino.length === 0) return;
-
-  try {
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(
-        tokensDestino.map((token) => ({
-          to: token,
-          title: usuario.nombre,
-          body: `${tarea.nombre} (${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos)`,
-        }))
-      ),
-    });
-  } catch (error) {
-    console.log('No se pudieron enviar las notificaciones push', error.message);
-  }
-}
+// mascotaService y notificacionesService para la parte de cada uno.
 
 function registrarEvento({ usuarioId, tareaId, registradoPorId }) {
   const tarea = db.prepare('SELECT * FROM tareas WHERE id = ?').get(tareaId);
@@ -190,7 +154,7 @@ function registrarEvento({ usuarioId, tareaId, registradoPorId }) {
   // Por eso esto no es una promesa ya lanzada, sino una función que el
   // controlador llama después de enviar la respuesta.
   function notificarEnSegundoPlano() {
-    if (usuario.familia_id) notificarEventoTarea(usuario, tarea);
+    if (usuario.familia_id) notificacionesService.notificarTareaCompletada(usuario, tarea);
   }
 
   return { respuesta, notificarEnSegundoPlano };

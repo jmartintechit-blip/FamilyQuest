@@ -2,6 +2,7 @@ const db = require('../db/conexion');
 const { crearErrorHttp } = require('./errores');
 const { obtenerFamiliaDeUsuario } = require('../middleware/familia');
 const { revisarResetRanking } = require('./familias.service');
+const mascotaService = require('./mascota.service');
 
 // Catálogo de tareas domésticas que se le da a cada familia nueva, para que
 // no arranquen con la lista en blanco. Cada una se puede editar o borrar
@@ -109,28 +110,9 @@ function eliminarTarea(tareaId, usuarioSolicitanteId) {
 
 // --- Registrar un evento (completar una tarea) ---
 // Toca varios dominios a la vez (puntos/ranking, salud y monedas de la
-// mascota, notificaciones). Los dos ayudantes de abajo llevan una nota:
-// se moverán a mascota.service.js y notificaciones.service.js cuando
-// lleguemos a esos recursos; por ahora viven aquí para no bloquear este
-// paso en servicios que todavía no existen.
-
-// TODO(paso mascota): mover a mascota.service.js
-function aplicarEfectosMascota(familiaId, tarea) {
-  const cambioSalud = tarea.tipo === 'positiva' ? 3 : -5;
-
-  db.prepare(`
-    UPDATE familias
-    SET salud_mascota = MAX(0, MIN(100, salud_mascota + ?))
-    WHERE id = ?
-  `).run(cambioSalud, familiaId);
-
-  // Las monedas compartidas suben y bajan igual que los puntos (nunca por debajo de 0)
-  db.prepare(`
-    UPDATE familias
-    SET monedas = MAX(0, monedas + ?)
-    WHERE id = ?
-  `).run(tarea.puntos_valor, familiaId);
-}
+// mascota, notificaciones): registrarEvento() orquesta y delega en
+// mascotaService para su parte. La notificación de abajo aún no tiene
+// servicio propio — se mueve a notificaciones.service.js en su paso.
 
 // TODO(paso notificaciones): mover a notificaciones.service.js
 async function notificarEventoTarea(usuario, tarea) {
@@ -195,7 +177,7 @@ function registrarEvento({ usuarioId, tareaId, registradoPorId }) {
     .run(tarea.puntos_valor, usuarioId);
 
   if (usuario.familia_id) {
-    aplicarEfectosMascota(usuario.familia_id, tarea);
+    mascotaService.aplicarEfectosTarea(usuario.familia_id, tarea);
   }
 
   const respuesta = {

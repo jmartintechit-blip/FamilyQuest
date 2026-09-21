@@ -10,12 +10,16 @@ const { obtenerFamiliaDeUsuario, verificarPerteneceAFamilia, verificarEsUnoMismo
 const authRoutes = require('./routes/auth.routes');
 const tareasRoutes = require('./routes/tareas.routes');
 const familiasRoutes = require('./routes/familias.routes');
+const chatRoutes = require('./routes/chat.routes');
 
 const app = express();
 const servidor = http.createServer(app);
 const io = new Server(servidor, {
   cors: { origin: '*' }
 });
+// Los controladores que necesitan emitir por socket (chat) lo leen de
+// req.app.get('io') en vez de importar `io` como un singleton global.
+app.set('io', io);
 
 const PUERTO = 3000;
 
@@ -47,6 +51,7 @@ app.use(express.static('public'));
 app.use(authRoutes);
 app.use(tareasRoutes);
 app.use(familiasRoutes);
+app.use(chatRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hola Juan! Tu servidor está funcionando');
@@ -226,54 +231,6 @@ app.post('/familias/:id/desbloquear-cosmetico', verificarToken, (req, res) => {
     cosmeticos_equipados: equipados,
     monedas: familia.monedas - definicion.costo,
   });
-});
-
-app.post('/mensajes', verificarToken, (req, res) => {
-  const { familia_id, usuario_id, texto } = req.body;
-
-  if (!familia_id || !usuario_id || !texto) {
-    return res.status(400).json({ error: 'familia_id, usuario_id y texto son obligatorios' });
-  }
-
-  if (req.usuario.id !== Number(usuario_id) || obtenerFamiliaDeUsuario(req.usuario.id) !== Number(familia_id)) {
-    return res.status(403).json({ error: 'No puedes enviar mensajes en nombre de otro usuario o de otra familia' });
-  }
-
-  const stmt = db.prepare('INSERT INTO mensajes (familia_id, usuario_id, texto) VALUES (?, ?, ?)');
-  const resultado = stmt.run(familia_id, usuario_id, texto);
-
-  const usuario = db.prepare('SELECT nombre FROM usuarios WHERE id = ?').get(usuario_id);
-
-  const mensajeCompleto = {
-    id: resultado.lastInsertRowid,
-    familia_id,
-    usuario_id,
-    texto,
-    autor: usuario.nombre,
-    fecha_hora: new Date().toISOString()
-  };
-
-  io.to(`familia_${familia_id}`).emit('mensaje_nuevo', mensajeCompleto);
-
-  res.status(201).json(mensajeCompleto);
-});
-
-app.get('/familias/:id/mensajes', verificarToken, (req, res) => {
-  const { id } = req.params;
-
-  if (obtenerFamiliaDeUsuario(req.usuario.id) !== Number(id)) {
-    return res.status(403).json({ error: 'No perteneces a esta familia' });
-  }
-
-  const mensajes = db.prepare(`
-    SELECT mensajes.id, mensajes.texto, mensajes.fecha_hora, usuarios.nombre AS autor
-    FROM mensajes
-    JOIN usuarios ON mensajes.usuario_id = usuarios.id
-    WHERE mensajes.familia_id = ?
-    ORDER BY mensajes.fecha_hora ASC
-  `).all(id);
-
-  res.json(mensajes);
 });
 
 app.get('/usuarios/:id/notificaciones', verificarToken, (req, res) => {

@@ -4,11 +4,10 @@ const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const db = require('./db/conexion');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const configurarSocketIO = require('./socket');
 const { verificarToken } = require('./middleware/auth');
 const { obtenerFamiliaDeUsuario, verificarPerteneceAFamilia, verificarEsUnoMismo } = require('./middleware/familia');
+const authRoutes = require('./routes/auth.routes');
 
 // Envía notificaciones push a través del servicio de Expo. Si algún token no
 // es válido o el envío falla, simplemente lo registramos en consola: nunca
@@ -145,6 +144,7 @@ const TAREAS_PREDEFINIDAS = [
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+app.use(authRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hola Juan! Tu servidor está funcionando');
@@ -349,17 +349,6 @@ app.post('/eventos', verificarToken, (req, res) => {
       `${tarea.nombre} (${tarea.puntos_valor >= 0 ? '+' : ''}${tarea.puntos_valor} puntos)`
     );
   }
-});
-
-app.put('/usuarios/push-token', verificarToken, (req, res) => {
-  const { push_token } = req.body;
-
-  if (!push_token) {
-    return res.status(400).json({ error: 'push_token es obligatorio' });
-  }
-
-  db.prepare('UPDATE usuarios SET push_token = ? WHERE id = ?').run(push_token, req.usuario.id);
-  res.json({ mensaje: 'Token guardado' });
 });
 
 app.get('/familias/:id/ranking', verificarToken, (req, res) => {
@@ -643,90 +632,6 @@ app.put('/usuarios/:id/notificaciones/leer-todas', verificarToken, (req, res) =>
 });
 
 configurarSocketIO(io);
-
-app.post('/registro', async (req, res) => {
-  const { nombre, email, password } = req.body;
-
-  if (!nombre || !email || !password) {
-    return res.status(400).json({ error: 'Nombre, email y contraseña son obligatorios' });
-  }
-
-  const existente = db.prepare('SELECT id FROM usuarios WHERE email = ?').get(email);
-  if (existente) {
-    return res.status(409).json({ error: 'Ya existe un usuario con ese email' });
-  }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  const stmt = db.prepare('INSERT INTO usuarios (nombre, email, password_hash) VALUES (?, ?, ?)');
-  const resultado = stmt.run(nombre, email, passwordHash);
-
-  res.status(201).json({ id: resultado.lastInsertRowid, nombre, email });
-});
-
-app.put('/usuarios/:id/password', verificarToken, async (req, res) => {
-  const { id } = req.params;
-  const { password_actual, password_nueva } = req.body;
-
-  if (req.usuario.id !== Number(id)) {
-    return res.status(403).json({ error: 'No puedes hacer esto en nombre de otro usuario' });
-  }
-
-  if (!password_actual || !password_nueva) {
-    return res.status(400).json({ error: 'La contraseña actual y la nueva son obligatorias' });
-  }
-
-  if (password_nueva.length < 8) {
-    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
-  }
-
-  const usuario = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(id);
-  if (!usuario) {
-    return res.status(404).json({ error: 'Usuario no encontrado' });
-  }
-
-  const coincide = await bcrypt.compare(password_actual, usuario.password_hash);
-  if (!coincide) {
-    return res.status(401).json({ error: 'La contraseña actual no es correcta' });
-  }
-
-  const nuevoHash = await bcrypt.hash(password_nueva, 10);
-  db.prepare('UPDATE usuarios SET password_hash = ? WHERE id = ?').run(nuevoHash, id);
-
-  res.json({ mensaje: 'Contraseña actualizada correctamente' });
-});
-
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email y contraseña son obligatorios' });
-  }
-
-  const usuario = db.prepare('SELECT * FROM usuarios WHERE email = ?').get(email);
-  if (!usuario) {
-    return res.status(401).json({ error: 'Email o contraseña incorrectos' });
-  }
-
-  const coincide = await bcrypt.compare(password, usuario.password_hash);
-  if (!coincide) {
-    return res.status(401).json({ error: 'Email o contraseña incorrectos' });
-  }
-
-  const token = jwt.sign(
-    { id: usuario.id, email: usuario.email },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  );
-
-  res.json({
-    id: usuario.id,
-    nombre: usuario.nombre,
-    email: usuario.email,
-    familia_id: usuario.familia_id,
-    token
-  });
-});
 
 servidor.listen(PUERTO, () => {
   console.log(`Servidor escuchando en http://localhost:${PUERTO}`);

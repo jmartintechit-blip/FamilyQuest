@@ -86,7 +86,7 @@ export default function TabsPrincipales() {
         headerShown: false,
         tabBarActiveTintColor: colores.primario,
         tabBarInactiveTintColor: colores.textoSuave,
-        tabBarStyle: { backgroundColor: colores.superficie, borderTopColor: colores.borde, height: 64, paddingBottom: 8, paddingTop: 8 },
+        tabBarStyle: { backgroundColor: colores.superficie, borderTopColor: colores.borde, height: 72, paddingBottom: 12, paddingTop: 8 },
         tabBarItemStyle: { paddingHorizontal: 0 },
         tabBarLabelStyle: { fontFamily: fuentes.medio, fontSize: 10 },
         tabBarIcon: ({ color, size, focused }) => (

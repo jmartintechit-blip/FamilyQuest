@@ -31,7 +31,7 @@ export default function ChatScreen() {
   }
 
   useEffect(() => {
-    const nuevoSocket = io(URL_BASE);
+    const nuevoSocket = io(URL_BASE, { auth: { token } });
     nuevoSocket.emit('unirse_familia', usuario.familia_id);
 
     nuevoSocket.on('mensaje_nuevo', (mensaje) => {
@@ -43,7 +43,7 @@ export default function ChatScreen() {
     return () => {
       nuevoSocket.disconnect();
     };
-  }, [usuario.familia_id]);
+  }, [usuario.familia_id, token]);
 
   // Cada vez que hay mensajes nuevos, bajamos la vista al final para que se
   // vean sin tener que desplazar manualmente (antes había que hacerlo a mano).

@@ -21,7 +21,7 @@ const io = new Server(servidor, {
 // req.app.get('io') en vez de importar `io` como un singleton global.
 app.set('io', io);
 
-const PUERTO = 3000;
+const PUERTO = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());

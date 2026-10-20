@@ -24,9 +24,10 @@ jobs:
       - name: Syntax check
         working-directory: backend
         run: find . -name '*.js' -not -path './node_modules/*' -print0 | xargs -0 -n1 node --check
-      # Starts the real server in a temporary directory and walks sign-up, login and the auth guard.
-      - name: Smoke test
-        run: node .github/scripts/smoke.mjs
+      # Each test file starts the real server in a temporary directory and talks to it over HTTP and Socket.IO.
+      - name: Test
+        working-directory: backend
+        run: npm test
       # Warning only: a registry hiccup or a new advisory must not block merges.
       - name: Audit production dependencies
         working-directory: backend

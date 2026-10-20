@@ -73,7 +73,7 @@ frontend/
 
 Decisiones de diseño que importan:
 
-- **La autorización se comprueba en el servidor.** Conocer un `familia_id` o un `usuario_id` no basta: cada endpoint REST comprueba que el usuario del JWT pertenece a esa familia.
+- **La autorización se comprueba en el servidor.** Conocer un `familia_id` o un `usuario_id` no basta: cada endpoint REST comprueba que el usuario del JWT pertenece a esa familia, y la conexión de Socket.IO exige un JWT válido y solo deja entrar en la sala de tu propia familia.
 - **Responder primero, notificar después.** La respuesta HTTP se envía antes de generar las notificaciones, así que un efecto secundario lento nunca retrasa al usuario.
 - **Reinicio semanal sin cron.** Cada vez que se lee una familia, el servidor comprueba si tocaba reiniciar.
 - **La mascota está dibujada con `react-native-svg`**, así que no hay imágenes para ella.
@@ -92,7 +92,7 @@ Decisiones de diseño que importan:
 | Autenticación   | JWT (7 días) y bcrypt                                                     |
 | Tiempo real     | Socket.IO                                                                 |
 | Notificaciones  | expo-notifications (sin operación en la build web)                        |
-| Calidad         | GitHub Actions                                                            |
+| Tests y CI      | Ejecutor de tests integrado de Node, `socket.io-client`, GitHub Actions   |
 
 ## Inicio rápido
 
@@ -106,21 +106,31 @@ cd backend && npm ci && cp .env.example .env && node index.js   # API en :3000
 cd frontend && npm ci && npx expo start --web                   # segundo terminal
 ```
 
-Antes del primer arranque, pon en `URL_BASE` de `frontend/constants/config.js` la dirección donde se alcanza la API: `http://localhost:3000` para la build web, o la dirección de red local de tu ordenador si usas Expo Go en el móvil (misma red Wi-Fi). Ahora mismo el archivo contiene la dirección de red local del propio autor, así que la app no conectará hasta que la cambies. Cambia `JWT_SECRET` en `backend/.env` por tu propia cadena larga y aleatoria.
+La app encuentra la API por sí sola: usa la dirección del ordenador que ejecuta Expo (la que tu móvil ya alcanza) con el puerto 3000, o `localhost` en la build web. Para apuntar a otro sitio, define `EXPO_PUBLIC_API_URL`. Cambia `JWT_SECRET` en `backend/.env` por tu propia cadena larga y aleatoria.
 
-En el móvil, escanea con la app [Expo Go](https://expo.dev/go) el código QR que imprime Expo.
+En el móvil, escanea con la app [Expo Go](https://expo.dev/go) el código QR que imprime Expo (misma red Wi-Fi que tu ordenador).
 
 ## Tests y calidad
 
-**Todavía no hay una suite de tests automáticos.** `npm test` en el backend sigue siendo el marcador de posición. La hoja de ruta lo lista el primero.
+```bash
+cd backend && npm test
+```
+
+17 tests pasan en este commit, con el ejecutor de tests integrado de Node. Cada archivo de tests arranca el servidor real en un directorio temporal (así nunca toca tu base de datos) y habla con él por HTTP y Socket.IO:
+
+- [`auth.test.js`](backend/test/auth.test.js) (7): registro, correo duplicado, errores de validación, inicio de sesión, contraseña incorrecta, rutas protegidas con token ausente o falso, y el cambio de contraseña.
+- [`familias.test.js`](backend/test/familias.test.js) (7): el catálogo de 53 tareas, unirse con código de invitación, puntos y ranking, validación de tareas, chat sin suplantación, y un test de aislamiento que hace que un usuario de otra familia llame a 17 endpoints de esta familia y espera 403 en todos.
+- [`socket.test.js`](backend/test/socket.test.js) (3): sin conexión sin un token válido, un miembro recibe los mensajes de su familia, y un miembro de otra familia no puede entrar en la sala ni recibirlos.
+
+El frontend no tiene tests.
 
 Lo que hace la [CI](.github/workflows/ci.yml) en cada push:
 
-- Backend: `npm ci`, una comprobación de sintaxis de todos los archivos `.js` y un [test de humo](.github/scripts/smoke.mjs) que arranca el servidor real en un directorio temporal y comprueba el registro (201), un correo duplicado (409), una entrada inválida (400), el inicio de sesión con token (200), una contraseña incorrecta (401) y una ruta protegida sin token (401).
+- Backend: `npm ci`, una comprobación de sintaxis de todos los archivos `.js` y `npm test`.
 - Frontend: `npm ci` y una exportación de producción del bundle web con Expo.
 - `npm audit --omit=dev` en ambos, solo como aviso, para que una advisory nueva no bloquee los merges.
 
-Auditoría de dependencias a 2026-10-20: el backend no reporta ninguna advisory. El frontend reporta 34 (11 moderadas, 22 altas y 1 crítica) en el árbol de herramientas de Expo. La crítica es `shell-quote`, una dependencia indirecta de la CLI de Expo. No se han corregido porque `npm audit fix --force` hace cambios incompatibles en la configuración de Expo.
+Auditoría de dependencias a 2026-10-20: el backend no reporta ninguna advisory. El frontend reporta 26 (8 moderadas, 18 altas, ninguna crítica), todas en las herramientas de compilación de Expo y React Native (Metro, la CLI de Expo y similares). No hay arreglo compatible: el que sugiere `npm audit` bajaría Expo al SDK 44.
 
 ## Seguridad
 
@@ -133,23 +143,22 @@ Los huecos están listados más abajo, en [Limitaciones conocidas](#limitaciones
 
 ## Limitaciones conocidas
 
-- **La conexión de Socket.IO no está autenticada.** `unirse_familia` mete al cliente en cualquier sala de familia que nombre, así que un cliente que conozca el id de una familia puede recibir en tiempo real los mensajes de su chat. Los endpoints REST están protegidos; el socket no. Es el hueco más importante.
-- **Sin límite de peticiones, sin cabeceras de seguridad** (como `helmet`) y CORS abierto a cualquier origen.
+- **Sin límite de peticiones, sin cabeceras de seguridad** (como `helmet`) y CORS abierto a cualquier origen. Las peticiones se autentican con un token en cabecera, no con una cookie, pero endurécelo antes de desplegar.
 - **`JWT_SECRET` no se comprueba al arrancar.** Sin él el servidor arranca y el inicio de sesión falla después con un error 500.
 - **Sin demo alojada ni configuración de despliegue.** SQLite es un archivo local, así que la app está pensada para un solo equipo.
-- **El cliente tiene la dirección de la API fija en el código** (`frontend/constants/config.js`), que hoy es la dirección de red local del autor.
 - **Las notificaciones push entre miembros de la familia todavía no funcionan.** Requieren vincular el proyecto a EAS. Solo funcionan las notificaciones locales.
 - **El token se guarda con `AsyncStorage`**, que no es un almacenamiento cifrado.
 - **La interfaz está solo en español**, y los identificadores del código también.
-- **Advisories de dependencias del frontend** (mira [Tests y calidad](#tests-y-calidad)).
+- **Advisories de dependencias del frontend** en las herramientas de compilación (mira [Tests y calidad](#tests-y-calidad)).
+- **El frontend no tiene tests**, y los tests no cubren los complementos de la mascota, las notificaciones ni el reinicio semanal.
 
 ## Hoja de ruta
 
 Ideas, no promesas:
 
-- [ ] Tests automáticos para los servicios del backend
-- [ ] Autenticar la conexión de Socket.IO y comprobar la pertenencia a la familia al unirse
 - [ ] Límite de peticiones, cabeceras de seguridad y una política CORS más estricta
+- [ ] Fallar al arrancar si falta `JWT_SECRET`
+- [ ] Tests para la mascota, las notificaciones y el reinicio semanal
 - [ ] Rol de administrador familiar (permisos sobre tareas y miembros)
 - [ ] Historial de tareas completadas
 - [ ] Notificaciones push reales entre miembros (requiere EAS)
@@ -160,7 +169,7 @@ Ideas, no promesas:
 
 ## Desarrollado con asistencia de IA
 
-Este proyecto se desarrolló con asistencia de IA (Claude Code), bajo la dirección del autor. La refactorización del backend en capas, la validación con Zod, el cambio de contraseña, la documentación y la CI se hicieron así. No hay una suite de tests automáticos, así que juzga el código leyéndolo y por el test de humo de la CI.
+Este proyecto se desarrolló con asistencia de IA (Claude Code), bajo la dirección del autor. La refactorización del backend en capas, la validación con Zod, el cambio de contraseña, la autenticación de Socket.IO, los tests, la documentación y la CI se hicieron así. Los tests son la mejor forma de juzgar el backend; el frontend no tiene ninguno.
 
 ## Licencia
 

@@ -29,8 +29,7 @@ Out of scope: denial of service by volume, social engineering, and anything that
 
 These are already known and listed in the README under [Known limitations](README.md#known-limitations). Please check it before reporting:
 
-- The Socket.IO connection is not authenticated.
 - There is no rate limiting or security-header middleware, and CORS is open.
 - The server starts without `JWT_SECRET` and login then fails.
-- The advisories that `npm audit` reports in the frontend's Expo tooling.
+- The advisories that `npm audit` reports in the frontend's Expo and React Native build tooling.
 - Using the placeholder `JWT_SECRET` from `backend/.env.example`: change it.

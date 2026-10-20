@@ -73,7 +73,7 @@ frontend/
 
 Design decisions that matter:
 
-- **Authorization is checked on the server.** Knowing a `familia_id` or `usuario_id` is not enough: each REST endpoint checks that the user in the JWT belongs to that family.
+- **Authorization is checked on the server.** Knowing a `familia_id` or `usuario_id` is not enough: each REST endpoint checks that the user in the JWT belongs to that family, and the Socket.IO connection needs a valid JWT and only lets you join your own family's room.
 - **Respond first, notify after.** The HTTP response is sent before notifications are produced, so a slow side effect never delays the user.
 - **Weekly reset without a cron job.** Each time a family is read, the server checks whether a reset was due.
 - **The pet is drawn with `react-native-svg`**, so there are no image assets for it.
@@ -92,7 +92,7 @@ Design decisions that matter:
 | Auth          | JWT (7 days) and bcrypt                                             |
 | Real time     | Socket.IO                                                           |
 | Notifications | expo-notifications (a no-op on the web build)                       |
-| Quality       | GitHub Actions                                                      |
+| Tests and CI  | Node's built-in test runner, `socket.io-client`, GitHub Actions    |
 
 ## Quickstart
 
@@ -106,21 +106,31 @@ cd backend && npm ci && cp .env.example .env && node index.js   # API on :3000
 cd frontend && npm ci && npx expo start --web                   # second terminal
 ```
 
-Before the first run, set `URL_BASE` in `frontend/constants/config.js` to where the API is reachable: `http://localhost:3000` for the web build, or your computer's LAN address if you use Expo Go on a phone (same Wi-Fi). The file currently holds the author's own LAN address, so the app will not connect until you change it. Change `JWT_SECRET` in `backend/.env` to your own long random string.
+The app finds the API on its own: it uses the address of the computer running Expo (the one your phone already reaches) with port 3000, or `localhost` on the web build. To point it somewhere else, set `EXPO_PUBLIC_API_URL`. Change `JWT_SECRET` in `backend/.env` to your own long random string.
 
-On a phone, scan the QR code that Expo prints with the [Expo Go](https://expo.dev/go) app.
+On a phone, scan the QR code that Expo prints with the [Expo Go](https://expo.dev/go) app (same Wi-Fi as your computer).
 
 ## Tests and quality
 
-**There is no automated test suite yet.** `npm test` in the backend is still the placeholder. The roadmap lists it first.
+```bash
+cd backend && npm test
+```
+
+17 tests pass on this commit, using Node's built-in test runner. Each test file starts the real server in a temporary directory (so it never touches your database) and talks to it over HTTP and Socket.IO:
+
+- [`auth.test.js`](backend/test/auth.test.js) (7): sign-up, duplicate e-mail, validation errors, login, wrong password, protected routes with a missing or fake token, and the password change.
+- [`familias.test.js`](backend/test/familias.test.js) (7): the 53-task catalogue, joining with an invite code, points and the ranking, task validation, chat without impersonation, and an isolation test that makes a user from another family call 17 endpoints of this family and expects 403 on all of them.
+- [`socket.test.js`](backend/test/socket.test.js) (3): no connection without a valid token, a member receives their family's messages, and a member of another family can neither join the room nor receive them.
+
+The frontend has no tests.
 
 What [CI](.github/workflows/ci.yml) does on every push:
 
-- Backend: `npm ci`, a syntax check of every `.js` file, and a [smoke test](.github/scripts/smoke.mjs) that starts the real server in a temporary directory and checks sign-up (201), a duplicate e-mail (409), invalid input (400), login with a token (200), a wrong password (401) and a protected route without a token (401).
+- Backend: `npm ci`, a syntax check of every `.js` file and `npm test`.
 - Frontend: `npm ci` and a production export of the web bundle with Expo.
 - `npm audit --omit=dev` for both, as a warning only, so a new advisory does not block merges.
 
-Dependency audit on 2026-10-20: the backend reports 0 advisories. The frontend reports 34 (11 moderate, 22 high, 1 critical) in the Expo tooling tree. The critical one is `shell-quote`, an indirect dependency of the Expo CLI. They were not fixed, because `npm audit fix --force` makes breaking changes to the Expo setup.
+Dependency audit on 2026-10-20: the backend reports 0 advisories. The frontend reports 26 (8 moderate, 18 high, none critical), all in the Expo and React Native build tooling (Metro, the Expo CLI and similar). There is no compatible fix: the one `npm audit` suggests would downgrade Expo to SDK 44.
 
 ## Security
 
@@ -133,23 +143,22 @@ The gaps are listed below, in [Known limitations](#known-limitations). Read them
 
 ## Known limitations
 
-- **The Socket.IO connection is not authenticated.** `unirse_familia` joins any family room that the client names, so a client that knows a family id can receive that family's chat messages in real time. The REST endpoints are protected; the socket is not. This is the most important gap.
-- **No rate limiting, no security headers** (such as `helmet`), and CORS is open to every origin.
+- **No rate limiting, no security headers** (such as `helmet`), and CORS is open to every origin. Requests are authenticated with a bearer token, not a cookie, but tighten this before deploying.
 - **`JWT_SECRET` is not checked at start-up.** Without it the server starts, and login then fails with a 500 error.
 - **No hosted demo and no deployment setup.** SQLite is one local file, so the app is meant for one machine.
-- **The client has a hard-coded API address** (`frontend/constants/config.js`), which today is the author's LAN address.
 - **Push notifications between family members do not work yet.** They need the project to be linked to EAS. Only local notifications work.
 - **The token is stored with `AsyncStorage`**, which is not encrypted storage.
 - **The interface is in Spanish only**, and the code identifiers are in Spanish too.
-- **Frontend dependency advisories** (see [Tests and quality](#tests-and-quality)).
+- **Frontend dependency advisories** in the build tooling (see [Tests and quality](#tests-and-quality)).
+- **The frontend has no tests**, and the tests do not cover pet cosmetics, notifications or the weekly reset.
 
 ## Roadmap
 
 Ideas, not promises:
 
-- [ ] Automated tests for the backend services
-- [ ] Authenticate the Socket.IO connection and check family membership on join
 - [ ] Rate limiting, security headers and a stricter CORS policy
+- [ ] Fail fast when `JWT_SECRET` is missing
+- [ ] Tests for the pet, notifications and the weekly reset
 - [ ] Family admin role (permissions over tasks and members)
 - [ ] History of completed tasks
 - [ ] Real push notifications between members (needs EAS)
@@ -160,7 +169,7 @@ Ideas, not promises:
 
 ## Built with AI assistance
 
-This project was developed with AI assistance (Claude Code), under the author's direction. The backend refactor into layers, the Zod validation, the password change, the documentation and the CI were done that way. There is no automated test suite, so judge the code by reading it and by the CI smoke test.
+This project was developed with AI assistance (Claude Code), under the author's direction. The backend refactor into layers, the Zod validation, the password change, the Socket.IO authentication, the tests, the documentation and the CI were done that way. The tests are the best way to judge the backend; the frontend has none.
 
 ## License
 

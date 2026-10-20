@@ -4,6 +4,27 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-20
+
+### Security
+
+- The Socket.IO connection now requires a valid JWT, and a user can only join their own family's room. Before, any client that knew a family id could receive that family's chat messages in real time.
+
+### Added
+
+- 17 backend tests (auth, family isolation across 17 endpoints, Socket.IO) that run with `npm test` and in CI.
+
+### Changed
+
+- The client no longer hard-codes the API address: it derives it from the machine running Expo, or from `EXPO_PUBLIC_API_URL`.
+- The backend port can be set with `PORT`.
+- Updated the frontend lockfile: `npm audit` went from 34 advisories (1 critical) to 26 (none critical).
+- New screenshots, taken from the running app.
+
+### Fixed
+
+- The bottom tab labels were cut off; the tab bar is taller.
+
 ## [0.1.0] - 2026-10-20
 
 First tagged version.
@@ -30,5 +51,6 @@ First tagged version.
 
 See the [README](README.md#known-limitations).
 
-[Unreleased]: https://github.com/jmartintechit-blip/FamilyQuest/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/jmartintechit-blip/FamilyQuest/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/jmartintechit-blip/FamilyQuest/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/jmartintechit-blip/FamilyQuest/releases/tag/v0.1.0

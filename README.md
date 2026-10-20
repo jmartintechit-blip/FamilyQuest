@@ -1,175 +1,167 @@
-<div align="center">
-
-# 🌱 FamilyQuest
-
-**Household task management for the whole family — with points, a weekly ranking, real-time chat, and a virtual pet that reflects how well the family is keeping up.**
-
-![React Native](https://img.shields.io/badge/React_Native-0.86-61DAFB?style=flat-square&logo=react&logoColor=white)
-![Expo](https://img.shields.io/badge/Expo-57-000020?style=flat-square&logo=expo&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-Express_5-339933?style=flat-square&logo=node.js&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003B57?style=flat-square&logo=sqlite&logoColor=white)
-![Socket.IO](https://img.shields.io/badge/Socket.IO-real_time-010101?style=flat-square&logo=socket.io&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+# FamilyQuest
 
 **English · [Español](README.es.md)**
 
+Household task manager for families that turns chores into a shared game: points, a weekly ranking, a family chat and a virtual pet.
+
+[![CI](https://github.com/jmartintechit-blip/FamilyQuest/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jmartintechit-blip/FamilyQuest/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+<div align="center">
+<img src="docs/images/inicio.png" width="180" alt="Home: the family pet and today's tasks" />
+<img src="docs/images/tareas.png" width="180" alt="Tasks: search and filters" />
+<img src="docs/images/ranking.png" width="180" alt="Weekly ranking" />
+<img src="docs/images/chat.png" width="180" alt="Family chat" />
+<img src="docs/images/notificaciones.png" width="180" alt="Activity notifications" />
+<img src="docs/images/ajustes.png" width="180" alt="Settings and family management" />
 </div>
 
----
+All names, e-mails and invite codes in the screenshots are fictitious. The interface is in Spanish.
 
-Built so that any family member can use it regardless of age or tech-savviness: clear UI, big buttons, no jargon, and a help section built right into the app.
+**There is no hosted demo.** The backend is a Node server with a SQLite file and WebSockets, so it runs on your own machine. See [Quickstart](#quickstart).
 
-## Table of contents
+> FamilyQuest is a portfolio project that you run yourself. It is not a hosted service and it has not been hardened for real family data. See [Known limitations](#known-limitations).
 
-- [What it does](#what-it-does)
-- [Screenshots](#screenshots)
-- [Tech stack](#tech-stack)
-- [Project structure](#project-structure)
-- [Getting started](#getting-started)
-- [Security](#security)
-- [How it works under the hood](#how-it-works-under-the-hood)
-- [Roadmap](#roadmap)
-- [License](#license)
+## Why this exists
+
+Dividing chores at home is a common source of friction. FamilyQuest tries to make it light: every task is worth points, the family competes as a team in a weekly ranking, and a shared pet shows at a glance how the household is doing. It is meant to be usable by any family member whatever their age: big buttons, plain language, a light/dark theme and three font sizes.
+
+It was also the author's first large project. The backend started as a single file and was later refactored into layers with input validation (see the [commit history](https://github.com/jmartintechit-blip/FamilyQuest/commits/main)).
 
 ## What it does
 
-Each family gets its own private space, accessed by creating an account and joining with an invite code.
+Each family gets a private space. You create an account and join with an invite code.
 
-| | |
-|---|---|
-| ✅ **Household tasks with points** | A catalog of 50+ predefined tasks (cleaning, cooking, studying, pet care...) that add or subtract points when completed. Search, filters, and creating your own tasks from a dedicated screen. |
-| 🏆 **Weekly ranking** | Compete as a team to see who scores the most points — it resets automatically every week so there's always a fresh competition. |
-| 🐾 **Shared virtual pet** | Its health rises with positive tasks and drops with negative ones: a visual thermometer for how the family is doing. Customizable with 6 species and several accessories (hats, glasses, accessories), unlockable with coins the family earns by playing. |
-| 🔔 **Activity notifications** | A dedicated feed lets the whole family know when someone completes a task, with local and push notifications. |
-| 💬 **Real-time family chat** | Over WebSockets (Socket.IO), with message bubbles, auto-scroll, and a proper empty state. |
-| 🌗 **Light/dark mode and adjustable font size** | Built to be comfortable to read at any age. |
-| 👨‍👩‍👧‍👦 **Family management** | See members and their points, copy or share the invite code with one tap, leave the family whenever you want. |
+- **Tasks with points.** A catalogue of 53 predefined tasks (39 positive, 14 negative), plus your own. Search, filters, and a dedicated screen to add tasks.
+- **Weekly ranking.** Family members compete for points, and the ranking resets every week.
+- **Shared virtual pet.** Its health goes up with positive tasks and down with negative ones. There are 6 species and 6 accessories in 3 categories (hats, glasses, neckwear), unlocked with coins the family earns.
+- **Activity feed.** A notifications tab shows who completed what. Local notifications are used (see limitations for push).
+- **Family chat in real time** over Socket.IO.
+- **Family management.** See members and points, copy or share the invite code, leave the family, change your password.
+- **Appearance.** Automatic, light or dark theme; normal, large or very large font.
 
-## Screenshots
+## Architecture
 
-<div align="center">
-<img src="docs/screenshots/inicio.png" width="180" alt="Home: pet and today's tasks" />
-<img src="docs/screenshots/tareas.png" width="180" alt="Tasks: search and filters" />
-<img src="docs/screenshots/ranking.png" width="180" alt="Weekly ranking" />
-<img src="docs/screenshots/chat.png" width="180" alt="Family chat" />
-<img src="docs/screenshots/notificaciones.png" width="180" alt="Activity notifications" />
-<img src="docs/screenshots/ajustes.png" width="180" alt="Settings and family management" />
-</div>
+```mermaid
+flowchart LR
+  A["Expo app<br/>React Native: iOS, Android, web"] -->|"REST + JWT"| B["Express 5 API<br/>routes, controllers, services"]
+  A <-->|"Socket.IO<br/>one room per family"| S["Socket.IO server"]
+  B --> D[("SQLite file<br/>better-sqlite3")]
+  B -->|"new chat message"| S
+```
+
+The backend is organised in layers and every resource (auth, tareas, familias, chat, mascota, notificaciones) follows the same pattern:
+
+- `routes/` declares the endpoints and applies the auth and validation middleware.
+- `controllers/` reads the request and shapes the response.
+- `services/` holds the business logic and the SQL. When one action touches several domains (completing a task changes points, pet health and notifications), the main service calls the others instead of repeating logic.
+- `schemas/` has one Zod schema per endpoint, applied by `middleware/validar.js`.
+
+```text
+backend/
+├── index.js        Express and Socket.IO bootstrap, mounts the routers
+├── socket.js       Connection handling and one room per family
+├── db/             SQLite connection, schema and migrations
+├── middleware/     JWT check, family membership, Zod adapter
+├── routes/  controllers/  services/  schemas/
+frontend/
+├── screens/        One screen per file
+├── components/     Reusable UI, including the SVG pet
+├── context/        Session and theme (React Context)
+└── navigation/     Tab navigation
+```
+
+Design decisions that matter:
+
+- **Authorization is checked on the server.** Knowing a `familia_id` or `usuario_id` is not enough: each REST endpoint checks that the user in the JWT belongs to that family.
+- **Respond first, notify after.** The HTTP response is sent before notifications are produced, so a slow side effect never delays the user.
+- **Weekly reset without a cron job.** Each time a family is read, the server checks whether a reset was due.
+- **The pet is drawn with `react-native-svg`**, so there are no image assets for it.
+- **`io` is injected** (`app.set('io', io)`) instead of imported as a global, so services do not depend on how the server starts.
 
 ## Tech stack
 
-| | |
-|---|---|
-| **Frontend** | React Native + Expo (a single client for iOS, Android, and web) |
-| **Navigation** | React Navigation (tabs + stack), with a floating center button for the most common action |
-| **Animations** | React Native Reanimated (pet, point transitions, chat) |
-| **Illustration** | react-native-svg (hand-drawn pet, no external images) |
-| **Backend** | Node.js + Express 5, organized in layers (routes / controllers / services) |
-| **Validation** | Zod, one schema per endpoint |
-| **Database** | SQLite (`better-sqlite3`) |
-| **Auth** | JWT + bcrypt, with per-family authorization on every endpoint |
-| **Real-time** | Socket.IO |
-| **Notifications** | expo-notifications (with a no-op stub on the web build) |
+| Area          | Choice                                                              |
+| ------------- | ------------------------------------------------------------------- |
+| Client        | React Native 0.86 with Expo 57 (one codebase for iOS, Android, web) |
+| Navigation    | React Navigation (tabs and stack)                                   |
+| Animation     | React Native Reanimated, react-native-svg                           |
+| Backend       | Node.js 22 or newer, Express 5, layered                             |
+| Validation    | Zod, one schema per endpoint                                        |
+| Database      | SQLite through `better-sqlite3`                                     |
+| Auth          | JWT (7 days) and bcrypt                                             |
+| Real time     | Socket.IO                                                           |
+| Notifications | expo-notifications (a no-op on the web build)                       |
+| Quality       | GitHub Actions                                                      |
 
-## Project structure
+## Quickstart
 
-```
-app-familia/
-├── backend/                    REST API + WebSocket, organized in layers
-│   ├── index.js                  Bootstrap: Express, global middleware, mounts the routers
-│   ├── socket.js                  Socket.IO handler (connection, per-family rooms)
-│   ├── db/
-│   │   └── conexion.js              SQLite connection, schema, and migrations
-│   ├── middleware/
-│   │   ├── auth.js                   JWT verification
-│   │   ├── familia.js                 Family-membership / "yourself only" checks
-│   │   └── validar.js                 Wraps a Zod schema as Express middleware
-│   ├── schemas/                    Zod validation schemas, one per resource
-│   ├── routes/                     Endpoints grouped by resource
-│   ├── controllers/                 Orchestrate the request and shape the response
-│   └── services/                    Business logic and data access
-└── frontend/                   React Native (Expo) app
-    ├── components/                Reusable components (pet, tasks, chat...)
-    ├── context/                    Global state: session and theme (React Context)
-    ├── navigation/                 Tab navigation
-    ├── screens/                    One screen = one file
-    └── utils/                      Notifications and utilities
-```
-
-Each backend resource (auth, tareas, familias, chat, mascota, notificaciones) follows the same pattern: `routes/` defines the endpoints and applies the auth/validation middleware, `controllers/` pulls data out of the request and shapes the response, and `services/` holds all the business logic and database queries. An endpoint that needs work from several domains at once (completing a task touches points, pet health, and notifications, for instance) has the main resource's service call into the other services — logic is never duplicated.
-
-## Getting started
-
-### Requirements
-
-- [Node.js](https://nodejs.org/) 18 or higher
-- The [Expo Go](https://expo.dev/go) app on your phone (or an iOS/Android emulator)
-- Backend and phone on the **same WiFi network**
-
-### 1. Backend
+You need Node.js 22 or newer (`better-sqlite3` 13 requires it; CI uses Node 24).
 
 ```bash
-cd backend
-npm install
+cd backend && npm ci && cp .env.example .env && node index.js   # API on :3000
 ```
-
-Create a `.env` file in `backend/` with a secret key to sign session tokens:
-
-```
-JWT_SECRET=write-any-long-random-string-here
-```
-
-Start the server:
 
 ```bash
-node index.js
+cd frontend && npm ci && npx expo start --web                   # second terminal
 ```
 
-You should see `Servidor escuchando en http://localhost:3000`.
+Before the first run, set `URL_BASE` in `frontend/constants/config.js` to where the API is reachable: `http://localhost:3000` for the web build, or your computer's LAN address if you use Expo Go on a phone (same Wi-Fi). The file currently holds the author's own LAN address, so the app will not connect until you change it. Change `JWT_SECRET` in `backend/.env` to your own long random string.
 
-### 2. Frontend
+On a phone, scan the QR code that Expo prints with the [Expo Go](https://expo.dev/go) app.
 
-```bash
-cd frontend
-npm install
-```
+## Tests and quality
 
-Find your local IP (Windows: `ipconfig`; macOS/Linux: `ifconfig` or `ip a`) and update it in `frontend/constants/config.js`:
+**There is no automated test suite yet.** `npm test` in the backend is still the placeholder. The roadmap lists it first.
 
-```js
-export const URL_BASE = 'http://YOUR_LOCAL_IP:3000';
-```
+What [CI](.github/workflows/ci.yml) does on every push:
 
-Start the app:
+- Backend: `npm ci`, a syntax check of every `.js` file, and a [smoke test](.github/scripts/smoke.mjs) that starts the real server in a temporary directory and checks sign-up (201), a duplicate e-mail (409), invalid input (400), login with a token (200), a wrong password (401) and a protected route without a token (401).
+- Frontend: `npm ci` and a production export of the web bundle with Expo.
+- `npm audit --omit=dev` for both, as a warning only, so a new advisory does not block merges.
 
-```bash
-npx expo start
-```
-
-Scan the QR code with the **Expo Go** app on your phone (same WiFi network as the backend).
-
-> Right now the app ships through Expo Go, which is great for development and testing with the family. The natural next step is packaging it with [EAS Build](https://docs.expo.dev/build/introduction/) to produce a standalone installable `.apk`/`.ipa` — see [Roadmap](#roadmap).
+Dependency audit on 2026-10-20: the backend reports 0 advisories. The frontend reports 34 (11 moderate, 22 high, 1 critical) in the Expo tooling tree. The critical one is `shell-quote`, an indirect dependency of the Expo CLI. They were not fixed, because `npm audit fix --force` makes breaking changes to the Expo setup.
 
 ## Security
 
-Every endpoint that reads or modifies a family's data checks, server-side, that the authenticated user (from their JWT) actually belongs to that family — knowing a `familia_id` or `usuario_id` isn't enough to access its data. This covers tasks, ranking, pet, cosmetics, chat, and notifications. Passwords are stored with `bcrypt` and never exposed in any API response. Every endpoint's input is validated with [Zod](https://zod.dev/) before it reaches business logic.
+- Every REST endpoint that reads or changes family data checks on the server that the authenticated user belongs to that family.
+- Passwords are hashed with bcrypt and never returned by the API.
+- Every request body is validated with Zod before it reaches the business logic.
+- To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
-## How it works under the hood
+The gaps are listed below, in [Known limitations](#known-limitations). Read them before using this with real data.
 
-- **Persistent session**: the JWT is stored on the device (`AsyncStorage`), so there's no need to log in every time the app opens.
-- **Dynamic theme**: colors and typography live in a `Context` (`TemaContext`) instead of being hardcoded per screen, so light/dark mode and font size can change on the fly.
-- **Weekly ranking without a cron job**: there's no background process — every time a family is read, it checks whether a reset was due (lazy, but enough for the size of this app).
-- **Local vs. push notifications**: reminders and the "task completed" alert are local notifications (no server needed). Real-time alerts to other family members are wired up in the backend, but need the project linked to EAS (Expo Application Services) to actually work outside of Expo Go.
+## Known limitations
+
+- **The Socket.IO connection is not authenticated.** `unirse_familia` joins any family room that the client names, so a client that knows a family id can receive that family's chat messages in real time. The REST endpoints are protected; the socket is not. This is the most important gap.
+- **No rate limiting, no security headers** (such as `helmet`), and CORS is open to every origin.
+- **`JWT_SECRET` is not checked at start-up.** Without it the server starts, and login then fails with a 500 error.
+- **No hosted demo and no deployment setup.** SQLite is one local file, so the app is meant for one machine.
+- **The client has a hard-coded API address** (`frontend/constants/config.js`), which today is the author's LAN address.
+- **Push notifications between family members do not work yet.** They need the project to be linked to EAS. Only local notifications work.
+- **The token is stored with `AsyncStorage`**, which is not encrypted storage.
+- **The interface is in Spanish only**, and the code identifiers are in Spanish too.
+- **Frontend dependency advisories** (see [Tests and quality](#tests-and-quality)).
 
 ## Roadmap
 
+Ideas, not promises:
+
+- [ ] Automated tests for the backend services
+- [ ] Authenticate the Socket.IO connection and check family membership on join
+- [ ] Rate limiting, security headers and a stricter CORS policy
 - [ ] Family admin role (permissions over tasks and members)
 - [ ] History of completed tasks
-- [ ] Real push notifications between family members (requires EAS)
+- [ ] Real push notifications between members (needs EAS)
+- [ ] Installable build with EAS (`.apk` and `.ipa`)
+- [ ] Hosted demo
 - [ ] Onboarding for new users
-- [ ] Installable build with EAS (`.apk` / `.ipa`)
-- [ ] Automated tests for the backend services
+- [ ] English interface
+
+## Built with AI assistance
+
+This project was developed with AI assistance (Claude Code), under the author's direction. The backend refactor into layers, the Zod validation, the password change, the documentation and the CI were done that way. There is no automated test suite, so judge the code by reading it and by the CI smoke test.
 
 ## License
 
-MIT License © 2026 Juan Nadales. See [`LICENSE`](LICENSE) for the full text.
+[MIT](LICENSE)

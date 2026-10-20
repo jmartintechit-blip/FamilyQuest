@@ -4,3 +4,12 @@ node_modules
 backend/*.db
 .claude
 .vscode
+# Added by code-review-graph
+.code-review-graph/
+# Local AI-tool configuration and private notes (never public)
+.codebuddy/
+.gemini/
+.qoder/
+.mcp.json
+opencode.jsonc
+private/

@@ -13,3 +13,6 @@ backend/*.db
 .mcp.json
 opencode.jsonc
 private/
+
+# Private working notes (never public)
+CLAUDE.md

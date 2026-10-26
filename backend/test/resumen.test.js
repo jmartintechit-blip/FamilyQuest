@@ -63,3 +63,13 @@ test('una familia sin actividad o con el reinicio inicial no genera resumen', ()
   db.prepare("UPDATE familias SET ranking_ultimo_reset = datetime('now', '-8 days') WHERE id = ?").run(vacia);
   assert.equal(familiasService.obtenerResumenSemanal(vacia), null); // pasó una semana, pero sin eventos
 });
+
+test('cuando se va el último miembro, la familia se borra también con su resumen y sus premios', () => {
+  require('../services/premios.service').sembrarPremiosPredefinidos(familiaId);
+  for (const { id } of db.prepare('SELECT id FROM usuarios WHERE familia_id = ?').all(familiaId)) familiasService.salirDeFamilia(id);
+
+  for (const tabla of ['familias', 'resumenes_semanales', 'premios']) {
+    const filtro = tabla === 'familias' ? 'id' : 'familia_id';
+    assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM ${tabla} WHERE ${filtro} = ?`).get(familiaId).n, 0, tabla);
+  }
+});

@@ -58,7 +58,7 @@ async function cambiarPassword(usuarioId, { password_actual, password_nueva }) {
   db.prepare('UPDATE usuarios SET password_hash = ? WHERE id = ?').run(nuevoHash, usuarioId);
 }
 
-// Borra la cuenta y los datos personales: mensajes, notificaciones y los eventos que
+// Borra la cuenta y los datos personales: mensajes, notificaciones, canjes y los eventos que
 // ella misma generó (sus puntos). En los eventos que registró para otros solo se
 // quita su nombre. Si era el último miembro, salirDeFamilia borra también la familia.
 async function eliminarCuenta(usuarioId, password) {
@@ -75,6 +75,7 @@ async function eliminarCuenta(usuarioId, password) {
     db.prepare('DELETE FROM mensajes WHERE usuario_id = ?').run(usuarioId);
     db.prepare('DELETE FROM notificaciones WHERE usuario_id = ?').run(usuarioId);
     db.prepare('DELETE FROM eventos WHERE usuario_id = ?').run(usuarioId);
+    db.prepare('DELETE FROM canjes WHERE usuario_id = ?').run(usuarioId);
     db.prepare('UPDATE eventos SET registrado_por = NULL WHERE registrado_por = ?').run(usuarioId);
     db.prepare('DELETE FROM usuarios WHERE id = ?').run(usuarioId);
   })();

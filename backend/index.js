@@ -14,6 +14,7 @@ const familiasRoutes = require('./routes/familias.routes');
 const chatRoutes = require('./routes/chat.routes');
 const mascotaRoutes = require('./routes/mascota.routes');
 const notificacionesRoutes = require('./routes/notificaciones.routes');
+const premiosRoutes = require('./routes/premios.routes');
 
 const app = express();
 const servidor = http.createServer(app);
@@ -35,6 +36,7 @@ app.use(familiasRoutes);
 app.use(chatRoutes);
 app.use(mascotaRoutes);
 app.use(notificacionesRoutes);
+app.use(premiosRoutes);
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 

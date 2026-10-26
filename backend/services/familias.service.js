@@ -52,6 +52,7 @@ function crearFamilia(nombre) {
   const familiaId = resultado.lastInsertRowid;
 
   tareasService.sembrarTareasPredefinidas(familiaId);
+  require('./premios.service').sembrarPremiosPredefinidos(familiaId);
 
   return { id: familiaId, nombre, codigo_invitacion: codigo };
 }
@@ -104,6 +105,9 @@ function ordenarFamiliaTrasSalida(familiaId) {
     db.prepare('DELETE FROM eventos WHERE tarea_id IN (SELECT id FROM tareas WHERE familia_id = ?)').run(familiaId);
     db.prepare('DELETE FROM mensajes WHERE familia_id = ?').run(familiaId);
     db.prepare('DELETE FROM tareas WHERE familia_id = ?').run(familiaId);
+    db.prepare('DELETE FROM canjes WHERE premio_id IN (SELECT id FROM premios WHERE familia_id = ?)').run(familiaId);
+    db.prepare('DELETE FROM premios WHERE familia_id = ?').run(familiaId);
+    db.prepare('DELETE FROM resumenes_semanales WHERE familia_id = ?').run(familiaId);
     db.prepare('DELETE FROM familias WHERE id = ?').run(familiaId);
   } else if (!miembros.some((m) => m.rol === 'admin')) {
     db.prepare("UPDATE usuarios SET rol = 'admin' WHERE id = ?").run(miembros[0].id);

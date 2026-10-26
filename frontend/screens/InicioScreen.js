@@ -13,6 +13,7 @@ import BannerEvento from '../components/BannerEvento';
 import TareaItem from '../components/TareaItem';
 import CampoTexto from '../components/CampoTexto';
 import BotonPrincipal from '../components/BotonPrincipal';
+import PremiosModal from '../components/PremiosModal';
 
 // Eventos de ejemplo para el "modo caos". El backend todavía no genera estos
 // eventos por su cuenta: esto es solo para poder mostrar y probar la parte
@@ -42,6 +43,7 @@ export default function InicioScreen() {
   const [modalNombreVisible, setModalNombreVisible] = useState(false);
   const [nombreEnEdicion, setNombreEnEdicion] = useState('');
   const [selectorMascotaVisible, setSelectorMascotaVisible] = useState(false);
+  const [premiosVisible, setPremiosVisible] = useState(false);
 
   async function cargarTareas() {
     try {
@@ -327,6 +329,13 @@ export default function InicioScreen() {
         <Text style={styles.enlaceCambiar}>Cambiar mascota</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity accessibilityRole="button" onPress={() => setPremiosVisible(true)} style={styles.filaPremios}>
+        <Ionicons name="gift-outline" size={18} color={colores.primario} />
+        <Text style={styles.enlaceCambiar}>Tienda de premios</Text>
+      </TouchableOpacity>
+
+      <PremiosModal visible={premiosVisible} onCerrar={() => setPremiosVisible(false)} onCambio={cargarFamilia} />
+
       <Tarjeta>
         <View style={styles.filaSeccion}>
           <Text style={styles.seccion}>Tus tareas</Text>
@@ -414,6 +423,14 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       paddingTop: espaciado.sm,
       borderTopWidth: 1,
       borderTopColor: colores.borde,
+    },
+    filaPremios: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: espaciado.xs,
+      minHeight: 44,
+      marginBottom: espaciado.sm,
     },
     filaMonedas: {
       flexDirection: 'row',

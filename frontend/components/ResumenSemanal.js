@@ -25,8 +25,8 @@ export default function ResumenSemanal({ resumen }) {
       </View>
 
       <Text style={[tipografia.chico, { marginBottom: espaciado.xs }]}>
-        {resumen.total_tareas} registros en total
-        {resumen.tarea_top ? ` · la más repetida: ${resumen.tarea_top.nombre} (${resumen.tarea_top.veces} veces)` : ''}
+        {resumen.total_tareas} registro{resumen.total_tareas === 1 ? '' : 's'} en total
+        {resumen.tarea_top ? ` · la más repetida: ${resumen.tarea_top.nombre} (${resumen.tarea_top.veces} {resumen.tarea_top.veces === 1 ? 'vez' : 'veces'})` : ''}
       </Text>
 
       {resumen.ranking.map((miembro, indice) => (

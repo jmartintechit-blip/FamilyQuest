@@ -125,6 +125,32 @@ const MIGRACIONES = [
       CREATE INDEX IF NOT EXISTS idx_resumenes_familia ON resumenes_semanales(familia_id, id);
     `);
   },
+
+  // 5: tienda de premios. La familia define los premios y los canjea con sus monedas
+  // compartidas. Un premio se archiva en vez de borrarse para conservar el historial de canjes.
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS premios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        familia_id INTEGER NOT NULL,
+        nombre TEXT NOT NULL,
+        costo INTEGER NOT NULL CHECK (costo > 0),
+        archivado INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (familia_id) REFERENCES familias(id)
+      );
+      CREATE TABLE IF NOT EXISTS canjes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        premio_id INTEGER NOT NULL,
+        usuario_id INTEGER NOT NULL,
+        costo INTEGER NOT NULL,
+        fecha_hora TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (premio_id) REFERENCES premios(id),
+        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_premios_familia ON premios(familia_id);
+      CREATE INDEX IF NOT EXISTS idx_canjes_premio ON canjes(premio_id, id);
+    `);
+  },
 ];
 
 function migrar(db) {

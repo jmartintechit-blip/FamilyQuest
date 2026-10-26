@@ -14,8 +14,17 @@ router.put(
   '/usuarios/:id/password',
   verificarToken,
   verificarEsUnoMismo(),
+  crearLimite(),
   validar(authSchema.cambiarPassword),
   authController.cambiarPassword
+);
+router.delete(
+  '/usuarios/:id',
+  verificarToken,
+  verificarEsUnoMismo(),
+  crearLimite(),
+  validar(authSchema.eliminarCuenta),
+  authController.eliminarCuenta
 );
 router.put('/usuarios/push-token', verificarToken, validar(authSchema.pushToken), authController.guardarPushToken);
 

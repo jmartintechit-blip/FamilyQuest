@@ -11,4 +11,7 @@ const unirseConCodigo = z.object({
   codigo_invitacion: z.string({ error: 'Código de invitación no válido' }).trim().min(1, 'Código de invitación no válido'),
 });
 
-module.exports = { crearFamilia, unirseConCodigo };
+// Renombrar usa las mismas reglas que crear.
+const renombrarFamilia = crearFamilia;
+
+module.exports = { crearFamilia, renombrarFamilia, unirseConCodigo };

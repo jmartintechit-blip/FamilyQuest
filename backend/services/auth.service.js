@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../db/conexion');
+const { salirDeFamilia } = require('./familias.service');
 const { crearErrorHttp } = require('./errores');
 
 async function registrar({ nombre, email, password }) {
@@ -57,8 +58,30 @@ async function cambiarPassword(usuarioId, { password_actual, password_nueva }) {
   db.prepare('UPDATE usuarios SET password_hash = ? WHERE id = ?').run(nuevoHash, usuarioId);
 }
 
+// Borra la cuenta y los datos personales: mensajes, notificaciones y los eventos que
+// ella misma generó (sus puntos). En los eventos que registró para otros solo se
+// quita su nombre. Si era el último miembro, salirDeFamilia borra también la familia.
+async function eliminarCuenta(usuarioId, password) {
+  const usuario = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(usuarioId);
+  if (!usuario) {
+    throw crearErrorHttp(404, 'Usuario no encontrado');
+  }
+  if (!(await bcrypt.compare(password, usuario.password_hash))) {
+    throw crearErrorHttp(401, 'La contraseña no es correcta');
+  }
+
+  db.transaction(() => {
+    salirDeFamilia(usuarioId);
+    db.prepare('DELETE FROM mensajes WHERE usuario_id = ?').run(usuarioId);
+    db.prepare('DELETE FROM notificaciones WHERE usuario_id = ?').run(usuarioId);
+    db.prepare('DELETE FROM eventos WHERE usuario_id = ?').run(usuarioId);
+    db.prepare('UPDATE eventos SET registrado_por = NULL WHERE registrado_por = ?').run(usuarioId);
+    db.prepare('DELETE FROM usuarios WHERE id = ?').run(usuarioId);
+  })();
+}
+
 function guardarPushToken(usuarioId, pushToken) {
   db.prepare('UPDATE usuarios SET push_token = ? WHERE id = ?').run(pushToken, usuarioId);
 }
 
-module.exports = { registrar, iniciarSesion, cambiarPassword, guardarPushToken };
+module.exports = { registrar, iniciarSesion, cambiarPassword, eliminarCuenta, guardarPushToken };

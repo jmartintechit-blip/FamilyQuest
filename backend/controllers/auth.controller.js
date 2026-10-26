@@ -34,9 +34,18 @@ async function cambiarPassword(req, res) {
   }
 }
 
+async function eliminarCuenta(req, res) {
+  try {
+    await authService.eliminarCuenta(Number(req.params.id), req.body.password);
+    res.json({ mensaje: 'Cuenta eliminada' });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message });
+  }
+}
+
 function guardarPushToken(req, res) {
   authService.guardarPushToken(req.usuario.id, req.body.push_token);
   res.json({ mensaje: 'Token guardado' });
 }
 
-module.exports = { registrar, iniciarSesion, cambiarPassword, guardarPushToken };
+module.exports = { registrar, iniciarSesion, cambiarPassword, eliminarCuenta, guardarPushToken };

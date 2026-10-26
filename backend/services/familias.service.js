@@ -1,5 +1,6 @@
 const { randomInt } = require('node:crypto');
 const db = require('../db/conexion');
+const { obtenerFamiliaDeUsuario } = require('../middleware/familia');
 const { crearErrorHttp } = require('./errores');
 
 const SEMANA_EN_MS = 7 * 24 * 60 * 60 * 1000;
@@ -51,12 +52,21 @@ function crearFamilia(nombre) {
 }
 
 function unirseConCodigo(usuarioId, codigoInvitacion) {
-  const familia = db.prepare('SELECT * FROM familias WHERE codigo_invitacion = ?').get(codigoInvitacion);
+  const familia = db.prepare('SELECT * FROM familias WHERE codigo_invitacion = ?').get(codigoInvitacion.toUpperCase());
   if (!familia) {
     throw crearErrorHttp(404, 'Código de invitación no válido');
   }
 
-  db.prepare('UPDATE usuarios SET familia_id = ? WHERE id = ?').run(familia.id, usuarioId);
+  const actual = obtenerFamiliaDeUsuario(usuarioId);
+  if (actual !== familia.id) {
+    db.transaction(() => {
+      if (actual) salirDeFamilia(usuarioId);
+      // Quien entra en una familia sin miembros (la acaba de crear) es su administrador.
+      const miembros = db.prepare('SELECT COUNT(*) AS n FROM usuarios WHERE familia_id = ?').get(familia.id).n;
+      db.prepare('UPDATE usuarios SET familia_id = ?, rol = ? WHERE id = ?')
+        .run(familia.id, miembros === 0 ? 'admin' : 'miembro', usuarioId);
+    })();
+  }
 
   return {
     mensaje: `Usuario unido a la familia "${familia.nombre}" correctamente`,
@@ -66,12 +76,66 @@ function unirseConCodigo(usuarioId, codigoInvitacion) {
 
 function listarMiembros(familiaId) {
   return db.prepare(
-    'SELECT id, nombre, email, puntos_totales, fecha_creacion FROM usuarios WHERE familia_id = ? ORDER BY puntos_totales DESC'
+    'SELECT id, nombre, email, rol, puntos_totales, fecha_creacion FROM usuarios WHERE familia_id = ? ORDER BY puntos_totales DESC'
   ).all(familiaId);
 }
 
+function esAdmin(usuarioId, familiaId) {
+  const usuario = db.prepare('SELECT familia_id, rol FROM usuarios WHERE id = ?').get(usuarioId);
+  return Boolean(usuario) && usuario.familia_id === Number(familiaId) && usuario.rol === 'admin';
+}
+
+function exigirAdmin(usuarioId, familiaId) {
+  if (!esAdmin(usuarioId, familiaId)) {
+    throw crearErrorHttp(403, 'Solo el administrador de la familia puede hacer esto');
+  }
+}
+
+// Tras una salida: si la familia se queda sin miembros se borra con todos sus datos
+// (nadie podría ya verlos); si se queda sin administrador, el miembro más antiguo lo es.
+function ordenarFamiliaTrasSalida(familiaId) {
+  const miembros = db.prepare('SELECT id, rol FROM usuarios WHERE familia_id = ? ORDER BY id').all(familiaId);
+  if (miembros.length === 0) {
+    db.prepare('DELETE FROM eventos WHERE tarea_id IN (SELECT id FROM tareas WHERE familia_id = ?)').run(familiaId);
+    db.prepare('DELETE FROM mensajes WHERE familia_id = ?').run(familiaId);
+    db.prepare('DELETE FROM tareas WHERE familia_id = ?').run(familiaId);
+    db.prepare('DELETE FROM familias WHERE id = ?').run(familiaId);
+  } else if (!miembros.some((m) => m.rol === 'admin')) {
+    db.prepare("UPDATE usuarios SET rol = 'admin' WHERE id = ?").run(miembros[0].id);
+  }
+}
+
 function salirDeFamilia(usuarioId) {
-  db.prepare('UPDATE usuarios SET familia_id = NULL, puntos_totales = 0 WHERE id = ?').run(usuarioId);
+  const familiaId = obtenerFamiliaDeUsuario(usuarioId);
+  db.transaction(() => {
+    db.prepare("UPDATE usuarios SET familia_id = NULL, puntos_totales = 0, rol = 'miembro' WHERE id = ?").run(usuarioId);
+    if (familiaId) ordenarFamiliaTrasSalida(familiaId);
+  })();
+}
+
+function expulsarMiembro(familiaId, usuarioId, solicitanteId) {
+  exigirAdmin(solicitanteId, familiaId);
+  if (Number(usuarioId) === solicitanteId) {
+    throw crearErrorHttp(400, 'Para irte tú mismo usa "Salir de la familia"');
+  }
+  if (obtenerFamiliaDeUsuario(usuarioId) !== Number(familiaId)) {
+    throw crearErrorHttp(404, 'Ese usuario no es miembro de tu familia');
+  }
+  salirDeFamilia(Number(usuarioId));
+}
+
+function renombrarFamilia(familiaId, nombre, solicitanteId) {
+  exigirAdmin(solicitanteId, familiaId);
+  db.prepare('UPDATE familias SET nombre = ? WHERE id = ?').run(nombre, familiaId);
+  return { id: Number(familiaId), nombre };
+}
+
+// El código antiguo deja de valer al instante: sirve si se ha filtrado.
+function regenerarCodigo(familiaId, solicitanteId) {
+  exigirAdmin(solicitanteId, familiaId);
+  const codigo = generarCodigo();
+  db.prepare('UPDATE familias SET codigo_invitacion = ? WHERE id = ?').run(codigo, familiaId);
+  return { codigo_invitacion: codigo };
 }
 
 function obtenerRanking(familiaId) {
@@ -94,10 +158,15 @@ function obtenerFamilia(familiaId) {
 
 module.exports = {
   revisarResetRanking,
+  esAdmin,
+  exigirAdmin,
+  salirDeFamilia,
+  expulsarMiembro,
+  renombrarFamilia,
+  regenerarCodigo,
   crearFamilia,
   unirseConCodigo,
   listarMiembros,
-  salirDeFamilia,
   obtenerRanking,
   obtenerFamilia,
 };

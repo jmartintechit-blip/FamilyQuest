@@ -18,8 +18,29 @@ function listarTareasDeFamilia(req, res) {
 
 function eliminarTarea(req, res) {
   try {
-    tareasService.eliminarTarea(req.params.id, req.usuario.id);
+    tareasService.eliminarTarea(Number(req.params.id), req.usuario.id);
     res.json({ mensaje: 'Tarea eliminada' });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message });
+  }
+}
+
+function editarTarea(req, res) {
+  try {
+    res.json(tareasService.editarTarea(Number(req.params.id), req.usuario.id, req.body));
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message });
+  }
+}
+
+function listarHistorial(req, res) {
+  res.json(tareasService.listarHistorial(Number(req.params.id), req.usuario.id, req.query));
+}
+
+function deshacerEvento(req, res) {
+  try {
+    tareasService.deshacerEvento(Number(req.params.id), req.usuario.id);
+    res.json({ mensaje: 'Evento deshecho' });
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message });
   }
@@ -42,4 +63,4 @@ function registrarEvento(req, res) {
   }
 }
 
-module.exports = { crearTarea, listarTareasDeFamilia, eliminarTarea, registrarEvento };
+module.exports = { crearTarea, listarTareasDeFamilia, editarTarea, eliminarTarea, listarHistorial, deshacerEvento, registrarEvento };

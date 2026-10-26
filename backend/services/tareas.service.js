@@ -1,7 +1,7 @@
 const db = require('../db/conexion');
 const { crearErrorHttp } = require('./errores');
 const { obtenerFamiliaDeUsuario } = require('../middleware/familia');
-const { revisarResetRanking } = require('./familias.service');
+const { revisarResetRanking, esAdmin, exigirAdmin } = require('./familias.service');
 const mascotaService = require('./mascota.service');
 const notificacionesService = require('./notificaciones.service');
 
@@ -93,20 +93,96 @@ function crearTarea(usuarioSolicitanteId, { familia_id, nombre, puntos_valor, ti
 }
 
 function listarTareasDeFamilia(familiaId) {
-  return db.prepare('SELECT * FROM tareas WHERE familia_id = ? ORDER BY tipo DESC, id DESC').all(familiaId);
+  return db.prepare('SELECT * FROM tareas WHERE familia_id = ? AND archivada = 0 ORDER BY tipo DESC, id DESC').all(familiaId);
 }
 
-function eliminarTarea(tareaId, usuarioSolicitanteId) {
-  const tarea = db.prepare('SELECT * FROM tareas WHERE id = ?').get(tareaId);
+function obtenerTareaDeMiFamilia(tareaId, usuarioId) {
+  const tarea = db.prepare('SELECT * FROM tareas WHERE id = ? AND archivada = 0').get(tareaId);
   if (!tarea) {
     throw crearErrorHttp(404, 'Tarea no encontrada');
   }
-
-  if (obtenerFamiliaDeUsuario(usuarioSolicitanteId) !== tarea.familia_id) {
+  if (obtenerFamiliaDeUsuario(usuarioId) !== tarea.familia_id) {
     throw crearErrorHttp(403, 'Esta tarea no pertenece a tu familia');
   }
+  return tarea;
+}
 
-  db.prepare('DELETE FROM tareas WHERE id = ?').run(tareaId);
+// Solo el administrador cambia el catálogo. Los eventos ya registrados guardan sus
+// propios puntos (puntos_aplicados), así que editar una tarea no reescribe el pasado.
+function editarTarea(tareaId, usuarioId, { nombre, puntos_valor, tipo }) {
+  const tarea = obtenerTareaDeMiFamilia(tareaId, usuarioId);
+  exigirAdmin(usuarioId, tarea.familia_id);
+
+  db.prepare('UPDATE tareas SET nombre = ?, puntos_valor = ?, tipo = ? WHERE id = ?').run(nombre, puntos_valor, tipo, tarea.id);
+  return { ...tarea, nombre, puntos_valor, tipo };
+}
+
+// Se archiva en vez de borrar: los eventos del historial apuntan a la tarea.
+function eliminarTarea(tareaId, usuarioId) {
+  const tarea = obtenerTareaDeMiFamilia(tareaId, usuarioId);
+  exigirAdmin(usuarioId, tarea.familia_id);
+
+  db.prepare('UPDATE tareas SET archivada = 1 WHERE id = ?').run(tarea.id);
+}
+
+// --- Historial y deshacer ---
+
+const VENTANA_DESHACER_MS = 24 * 60 * 60 * 1000;
+
+function parsearFecha(fechaSqlite) {
+  return new Date(fechaSqlite.replace(' ', 'T') + 'Z');
+}
+
+// Se puede deshacer un evento reciente (24 h) y de la semana en curso (tras el reinicio
+// del ranking los puntos ya no existen, y restarlos dejaría el ranking en negativo).
+// Lo puede hacer quien lo registró o el administrador.
+function sePuedeDeshacer(evento, solicitanteId, familia) {
+  const reciente = Date.now() - parsearFecha(evento.fecha_hora).getTime() < VENTANA_DESHACER_MS;
+  const deEstaSemana = evento.fecha_hora >= familia.ranking_ultimo_reset;
+  const permitido = evento.registrado_por === solicitanteId || esAdmin(solicitanteId, familia.id);
+  return reciente && deEstaSemana && permitido;
+}
+
+function listarHistorial(familiaId, solicitanteId, { antes, limite = 30 } = {}) {
+  revisarResetRanking(familiaId);
+  const familia = db.prepare('SELECT id, ranking_ultimo_reset FROM familias WHERE id = ?').get(familiaId);
+  const filas = db.prepare(`
+    SELECT eventos.id, eventos.usuario_id, usuarios.nombre AS usuario, tareas.nombre AS tarea, tareas.tipo,
+           eventos.puntos_aplicados, eventos.fecha_hora, eventos.registrado_por, registrador.nombre AS registrado_por_nombre
+    FROM eventos
+    JOIN usuarios ON usuarios.id = eventos.usuario_id
+    JOIN tareas ON tareas.id = eventos.tarea_id
+    LEFT JOIN usuarios AS registrador ON registrador.id = eventos.registrado_por
+    WHERE usuarios.familia_id = ? AND (? IS NULL OR eventos.id < ?)
+    ORDER BY eventos.id DESC
+    LIMIT ?
+  `).all(familiaId, antes ?? null, antes ?? null, limite);
+
+  return filas.map((e) => ({ ...e, deshacible: sePuedeDeshacer(e, solicitanteId, familia) }));
+}
+
+function deshacerEvento(eventoId, solicitanteId) {
+  const evento = db.prepare('SELECT * FROM eventos WHERE id = ?').get(eventoId);
+  const usuario = evento && db.prepare('SELECT * FROM usuarios WHERE id = ?').get(evento.usuario_id);
+  if (!evento || !usuario || !usuario.familia_id) {
+    throw crearErrorHttp(404, 'Evento no encontrado');
+  }
+  if (obtenerFamiliaDeUsuario(solicitanteId) !== usuario.familia_id) {
+    throw crearErrorHttp(403, 'Este evento no pertenece a tu familia');
+  }
+
+  revisarResetRanking(usuario.familia_id);
+  const familia = db.prepare('SELECT id, ranking_ultimo_reset FROM familias WHERE id = ?').get(usuario.familia_id);
+  if (!sePuedeDeshacer(evento, solicitanteId, familia)) {
+    throw crearErrorHttp(403, 'Este evento ya no se puede deshacer, o no lo registraste tú');
+  }
+
+  const tarea = db.prepare('SELECT * FROM tareas WHERE id = ?').get(evento.tarea_id);
+  db.transaction(() => {
+    db.prepare('DELETE FROM eventos WHERE id = ?').run(evento.id);
+    db.prepare('UPDATE usuarios SET puntos_totales = puntos_totales - ? WHERE id = ?').run(evento.puntos_aplicados, usuario.id);
+    mascotaService.aplicarEfectosTarea(usuario.familia_id, { ...tarea, puntos_valor: evento.puntos_aplicados }, -1);
+  })();
 }
 
 // --- Registrar un evento (completar una tarea) ---
@@ -115,7 +191,7 @@ function eliminarTarea(tareaId, usuarioSolicitanteId) {
 // mascotaService y notificacionesService para la parte de cada uno.
 
 function registrarEvento({ usuarioId, tareaId, registradoPorId }) {
-  const tarea = db.prepare('SELECT * FROM tareas WHERE id = ?').get(tareaId);
+  const tarea = db.prepare('SELECT * FROM tareas WHERE id = ? AND archivada = 0').get(tareaId);
   if (!tarea) {
     throw crearErrorHttp(404, 'Tarea no encontrada');
   }
@@ -164,6 +240,9 @@ module.exports = {
   sembrarTareasPredefinidas,
   crearTarea,
   listarTareasDeFamilia,
+  editarTarea,
   eliminarTarea,
+  listarHistorial,
+  deshacerEvento,
   registrarEvento,
 };

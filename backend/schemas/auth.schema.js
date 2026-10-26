@@ -36,4 +36,8 @@ const pushToken = z.object({
   push_token: z.string({ error: 'push_token es obligatorio' }).trim().min(1, 'push_token es obligatorio'),
 });
 
-module.exports = { registro, login, cambiarPassword, pushToken };
+const eliminarCuenta = z.object({
+  password: z.string({ error: 'La contraseña es obligatoria' }).min(1, 'La contraseña es obligatoria'),
+});
+
+module.exports = { registro, login, cambiarPassword, pushToken, eliminarCuenta };

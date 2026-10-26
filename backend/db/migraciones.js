@@ -98,6 +98,17 @@ const MIGRACIONES = [
       CREATE INDEX IF NOT EXISTS idx_notificaciones_usuario ON notificaciones(usuario_id, leida);
     `);
   },
+
+  // 3: rol de administrador (el miembro más antiguo de cada familia existente lo recibe)
+  // y archivado de tareas, para borrarlas sin perder el historial de eventos que las citan.
+  (db) => {
+    anadirColumna(db, 'usuarios', "rol TEXT NOT NULL DEFAULT 'miembro'");
+    anadirColumna(db, 'tareas', 'archivada INTEGER NOT NULL DEFAULT 0');
+    db.exec(`
+      UPDATE usuarios SET rol = 'admin'
+      WHERE id IN (SELECT MIN(id) FROM usuarios WHERE familia_id IS NOT NULL GROUP BY familia_id)
+    `);
+  },
 ];
 
 function migrar(db) {

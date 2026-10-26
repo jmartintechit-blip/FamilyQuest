@@ -25,8 +25,33 @@ function listarMiembros(req, res) {
   res.json(miembros);
 }
 
+function renombrarFamilia(req, res) {
+  try {
+    res.json(familiasService.renombrarFamilia(req.params.id, req.body.nombre, req.usuario.id));
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message });
+  }
+}
+
+function regenerarCodigo(req, res) {
+  try {
+    res.json(familiasService.regenerarCodigo(req.params.id, req.usuario.id));
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message });
+  }
+}
+
+function expulsarMiembro(req, res) {
+  try {
+    familiasService.expulsarMiembro(req.params.id, req.params.usuarioId, req.usuario.id);
+    res.json({ mensaje: 'Miembro expulsado de la familia' });
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message });
+  }
+}
+
 function salirDeFamilia(req, res) {
-  familiasService.salirDeFamilia(req.params.id);
+  familiasService.salirDeFamilia(Number(req.params.id));
   res.json({ mensaje: 'Has salido de la familia' });
 }
 
@@ -44,4 +69,4 @@ function obtenerFamilia(req, res) {
   }
 }
 
-module.exports = { crearFamilia, unirseConCodigo, listarMiembros, salirDeFamilia, obtenerRanking, obtenerFamilia };
+module.exports = { crearFamilia, renombrarFamilia, regenerarCodigo, expulsarMiembro, unirseConCodigo, listarMiembros, salirDeFamilia, obtenerRanking, obtenerFamilia };

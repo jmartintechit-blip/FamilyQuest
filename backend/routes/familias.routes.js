@@ -14,5 +14,8 @@ router.get('/familias/:id/usuarios', verificarToken, verificarPerteneceAFamilia,
 router.put('/usuarios/:id/salir-familia', verificarToken, verificarEsUnoMismo(), familiasController.salirDeFamilia);
 router.get('/familias/:id/ranking', verificarToken, verificarPerteneceAFamilia, familiasController.obtenerRanking);
 router.get('/familias/:id', verificarToken, verificarPerteneceAFamilia, familiasController.obtenerFamilia);
+router.put('/familias/:id', verificarToken, verificarPerteneceAFamilia, validar(familiasSchema.renombrarFamilia), familiasController.renombrarFamilia);
+router.post('/familias/:id/codigo', verificarToken, verificarPerteneceAFamilia, familiasController.regenerarCodigo);
+router.delete('/familias/:id/usuarios/:usuarioId', verificarToken, verificarPerteneceAFamilia, familiasController.expulsarMiembro);
 
 module.exports = router;

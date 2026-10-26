@@ -158,8 +158,9 @@ function desbloquearCosmetico(familiaId, cosmetico) {
 // La llama tareas.service.js al completar una tarea: la salud y las
 // monedas de la mascota suben o bajan según el tipo de tarea. Vivía
 // dentro de tareas.service.js (con un TODO) hasta este paso.
-function aplicarEfectosTarea(familiaId, tarea) {
-  const cambioSalud = tarea.tipo === 'positiva' ? 3 : -5;
+// `signo` = -1 deshace los efectos de una tarea ya aplicada (por ejemplo, al deshacer un evento).
+function aplicarEfectosTarea(familiaId, tarea, signo = 1) {
+  const cambioSalud = (tarea.tipo === 'positiva' ? 3 : -5) * signo;
 
   db.prepare(`
     UPDATE familias
@@ -172,7 +173,7 @@ function aplicarEfectosTarea(familiaId, tarea) {
     UPDATE familias
     SET monedas = MAX(0, monedas + ?)
     WHERE id = ?
-  `).run(tarea.puntos_valor, familiaId);
+  `).run(tarea.puntos_valor * signo, familiaId);
 }
 
 module.exports = {

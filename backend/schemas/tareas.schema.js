@@ -9,6 +9,9 @@ const crearTarea = z.object({
   tipo: z.enum(['positiva', 'negativa'], 'El tipo debe ser "positiva" o "negativa"'),
 });
 
+// Editar una tarea: mismos campos que al crearla, sin familia_id (la tarea ya pertenece a una).
+const editarTarea = crearTarea.omit({ familia_id: true });
+
 const MSG_EVENTO = 'usuario_id y tarea_id son obligatorios';
 
 const registrarEvento = z.object({
@@ -16,4 +19,10 @@ const registrarEvento = z.object({
   tarea_id: z.number({ error: MSG_EVENTO }).int(MSG_EVENTO).positive(MSG_EVENTO),
 });
 
-module.exports = { crearTarea, registrarEvento };
+// ?antes=<id del evento más antiguo cargado>&limite=<1-100, por defecto 30>
+const listarHistorial = z.object({
+  antes: z.coerce.number().int().positive().optional(),
+  limite: z.coerce.number().int().min(1).max(100).default(30),
+});
+
+module.exports = { crearTarea, editarTarea, registrarEvento, listarHistorial };

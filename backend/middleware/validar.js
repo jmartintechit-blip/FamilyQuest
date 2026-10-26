@@ -16,7 +16,8 @@ function validar(esquema, origen = 'body') {
       return res.status(400).json({ error: primerError.message });
     }
 
-    req[origen] = resultado.data;
+    // En Express 5 req.query es un getter sin setter: hay que redefinirla.
+    Object.defineProperty(req, origen, { value: resultado.data, writable: true, configurable: true, enumerable: true });
     next();
   };
 }

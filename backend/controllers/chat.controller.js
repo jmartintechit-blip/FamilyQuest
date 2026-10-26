@@ -18,7 +18,7 @@ function enviarMensaje(req, res) {
 }
 
 function listarMensajesDeFamilia(req, res) {
-  const mensajes = chatService.listarMensajesDeFamilia(req.params.id);
+  const mensajes = chatService.listarMensajesDeFamilia(req.params.id, req.query);
   res.json(mensajes);
 }
 

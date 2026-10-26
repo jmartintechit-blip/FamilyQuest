@@ -8,6 +8,6 @@ const chatSchema = require('../schemas/chat.schema');
 const router = express.Router();
 
 router.post('/mensajes', verificarToken, validar(chatSchema.enviarMensaje), chatController.enviarMensaje);
-router.get('/familias/:id/mensajes', verificarToken, verificarPerteneceAFamilia, chatController.listarMensajesDeFamilia);
+router.get('/familias/:id/mensajes', verificarToken, verificarPerteneceAFamilia, validar(chatSchema.listarMensajes, 'query'), chatController.listarMensajesDeFamilia);
 
 module.exports = router;

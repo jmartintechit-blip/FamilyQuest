@@ -8,4 +8,10 @@ const enviarMensaje = z.object({
   texto: z.string({ error: MSG_MENSAJE }).trim().min(1, MSG_MENSAJE).max(1000, 'El mensaje es demasiado largo'),
 });
 
-module.exports = { enviarMensaje };
+// ?antes=<id del mensaje más antiguo cargado>&limite=<1-100, por defecto 50>
+const listarMensajes = z.object({
+  antes: z.coerce.number().int().positive().optional(),
+  limite: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+module.exports = { enviarMensaje, listarMensajes };

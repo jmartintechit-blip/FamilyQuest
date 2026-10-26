@@ -109,3 +109,16 @@ test('el chat guarda y lista los mensajes de la familia, sin poder suplantar a o
   const lista = await srv.llamar('GET', `/familias/${familiaA.id}/mensajes`, { token: marcos.token });
   assert.deepEqual(lista.datos.map((m) => m.texto), ['Hola familia']);
 });
+
+test('el historial del chat se pagina hacia atrás por id', async () => {
+  for (let i = 1; i <= 4; i++) {
+    await srv.llamar('POST', '/mensajes', { token: ana.token, body: { familia_id: familiaA.id, usuario_id: ana.id, texto: `msg ${i}` } });
+  }
+  const ruta = `/familias/${familiaA.id}/mensajes`;
+  const reciente = await srv.llamar('GET', `${ruta}?limite=2`, { token: ana.token });
+  assert.deepEqual(reciente.datos.map((m) => m.texto), ['msg 3', 'msg 4']);
+  const anterior = await srv.llamar('GET', `${ruta}?limite=2&antes=${reciente.datos[0].id}`, { token: ana.token });
+  assert.deepEqual(anterior.datos.map((m) => m.texto), ['msg 1', 'msg 2']);
+  const invalido = await srv.llamar('GET', `${ruta}?limite=0`, { token: ana.token });
+  assert.equal(invalido.status, 400);
+});

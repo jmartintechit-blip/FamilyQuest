@@ -29,14 +29,19 @@ function enviarMensaje(io, { familiaId, usuarioId, texto, remitenteId }) {
   return mensajeCompleto;
 }
 
-function listarMensajesDeFamilia(familiaId) {
-  return db.prepare(`
-    SELECT mensajes.id, mensajes.texto, mensajes.fecha_hora, usuarios.nombre AS autor
+// Devuelve una página en orden cronológico: los `limite` mensajes más recientes, o los
+// anteriores al id `antes` para cargar más hacia atrás. Se ordena por id (autoincremental)
+// y no por fecha, que en el mismo segundo no distingue el orden.
+function listarMensajesDeFamilia(familiaId, { antes, limite = 50 } = {}) {
+  const filas = db.prepare(`
+    SELECT mensajes.id, mensajes.usuario_id, mensajes.texto, mensajes.fecha_hora, usuarios.nombre AS autor
     FROM mensajes
     JOIN usuarios ON mensajes.usuario_id = usuarios.id
-    WHERE mensajes.familia_id = ?
-    ORDER BY mensajes.fecha_hora ASC
-  `).all(familiaId);
+    WHERE mensajes.familia_id = ? AND (? IS NULL OR mensajes.id < ?)
+    ORDER BY mensajes.id DESC
+    LIMIT ?
+  `).all(familiaId, antes ?? null, antes ?? null, limite);
+  return filas.reverse();
 }
 
 module.exports = { enviarMensaje, listarMensajesDeFamilia };

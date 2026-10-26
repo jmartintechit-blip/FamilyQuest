@@ -15,16 +15,28 @@ export default function ChatScreen() {
   const [mensajes, setMensajes] = useState([]);
   const [textoMensaje, setTextoMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [hayAnteriores, setHayAnteriores] = useState(false);
   const scrollRef = useRef(null);
+  const cargandoAnteriores = useRef(false);
 
-  async function cargarMensajes() {
+  // El servidor devuelve páginas de 50; si llega una página llena, puede haber más atrás.
+  const TAMANO_PAGINA = 50;
+
+  async function cargarMensajes(antes) {
     try {
-      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/mensajes`, {
+      const query = antes ? `?antes=${antes}` : '';
+      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/mensajes${query}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!respuesta.ok) return;
       const datos = await respuesta.json();
-      setMensajes(datos);
+      setHayAnteriores(datos.length === TAMANO_PAGINA);
+      if (antes) {
+        cargandoAnteriores.current = true;
+        setMensajes((actuales) => [...datos, ...actuales]);
+      } else {
+        setMensajes(datos);
+      }
     } catch (error) {
       console.log('Error cargando mensajes', error);
     }
@@ -48,6 +60,11 @@ export default function ChatScreen() {
   // Cada vez que hay mensajes nuevos, bajamos la vista al final para que se
   // vean sin tener que desplazar manualmente (antes había que hacerlo a mano).
   function alCambiarContenido() {
+    // Al cargar mensajes antiguos no hay que saltar al final.
+    if (cargandoAnteriores.current) {
+      cargandoAnteriores.current = false;
+      return;
+    }
     scrollRef.current?.scrollToEnd({ animated: true });
   }
 
@@ -93,6 +110,16 @@ export default function ChatScreen() {
         contentContainerStyle={{ padding: espaciado.md, flexGrow: 1 }}
         onContentSizeChange={alCambiarContenido}
       >
+        {hayAnteriores && (
+          <TouchableOpacity
+            onPress={() => cargarMensajes(mensajes[0].id)}
+            accessibilityRole="button"
+            accessibilityLabel="Cargar mensajes anteriores"
+            style={styles.botonAnteriores}
+          >
+            <Text style={tipografia.cuerpoSuave}>Cargar mensajes anteriores</Text>
+          </TouchableOpacity>
+        )}
         {mensajes.length === 0 ? (
           <View style={styles.vacio}>
             <Ionicons name="chatbubbles-outline" size={40} color={colores.textoSuave} style={{ marginBottom: espaciado.xs }} />
@@ -133,6 +160,11 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
     },
     titulo: {
       paddingHorizontal: espaciado.md,
+      marginBottom: espaciado.sm,
+    },
+    botonAnteriores: {
+      alignItems: 'center',
+      padding: espaciado.sm,
       marginBottom: espaciado.sm,
     },
     cajaChat: {

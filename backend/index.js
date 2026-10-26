@@ -2,7 +2,10 @@ require('dotenv').config({ quiet: true });
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const helmet = require('helmet');
 const { Server } = require('socket.io');
+const { comprobarEntorno, origenesPermitidos } = require('./config');
+comprobarEntorno();
 require('./db/conexion');
 const configurarSocketIO = require('./socket');
 const authRoutes = require('./routes/auth.routes');
@@ -15,7 +18,7 @@ const notificacionesRoutes = require('./routes/notificaciones.routes');
 const app = express();
 const servidor = http.createServer(app);
 const io = new Server(servidor, {
-  cors: { origin: '*' }
+  cors: { origin: origenesPermitidos() }
 });
 // Los controladores que necesitan emitir por socket (chat) lo leen de
 // req.app.get('io') en vez de importar `io` como un singleton global.
@@ -23,9 +26,9 @@ app.set('io', io);
 
 const PUERTO = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(helmet());
+app.use(cors({ origin: origenesPermitidos() }));
 app.use(express.json());
-app.use(express.static('public'));
 app.use(authRoutes);
 app.use(tareasRoutes);
 app.use(familiasRoutes);

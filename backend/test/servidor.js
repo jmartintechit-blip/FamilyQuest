@@ -17,12 +17,12 @@ function puertoLibre() {
   });
 }
 
-async function arrancarServidor() {
+async function arrancarServidor(entorno = {}) {
   const puerto = await puertoLibre();
   const carpeta = mkdtempSync(join(tmpdir(), 'familyquest-test-'));
   const proceso = spawn(process.execPath, [resolve(__dirname, '..', 'index.js')], {
     cwd: carpeta,
-    env: { ...process.env, PORT: String(puerto), JWT_SECRET: 'secreto-solo-para-tests' },
+    env: { ...process.env, PORT: String(puerto), JWT_SECRET: 'secreto-solo-para-tests', RATE_LIMIT_MAX: '1000', ...entorno },
     stdio: 'ignore',
   });
   const base = `http://localhost:${puerto}`;

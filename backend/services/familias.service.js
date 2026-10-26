@@ -1,3 +1,4 @@
+const { randomInt } = require('node:crypto');
 const db = require('../db/conexion');
 const { crearErrorHttp } = require('./errores');
 
@@ -21,8 +22,13 @@ function revisarResetRanking(familiaId) {
   }
 }
 
+// Sin 0/O/1/I para que el código se pueda dictar por teléfono sin confusiones.
+const ALFABETO_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
 function generarCodigo() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  let codigo = '';
+  for (let i = 0; i < 6; i++) codigo += ALFABETO_CODIGO[randomInt(ALFABETO_CODIGO.length)];
+  return codigo;
 }
 
 function crearFamilia(nombre) {

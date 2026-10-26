@@ -1,4 +1,5 @@
 const { randomInt } = require('node:crypto');
+const bcrypt = require('bcrypt');
 const db = require('../db/conexion');
 const { obtenerFamiliaDeUsuario } = require('../middleware/familia');
 const { crearErrorHttp } = require('./errores');
@@ -133,6 +134,26 @@ function expulsarMiembro(familiaId, usuarioId, solicitanteId) {
   salirDeFamilia(Number(usuarioId));
 }
 
+// Recuperación de contraseña sin correo: el administrador genera una contraseña temporal
+// para un miembro de su familia, se la da en persona y el miembro la cambia en Ajustes.
+// Se devuelve una sola vez y solo se guarda su hash. Los tokens ya emitidos siguen
+// valiendo hasta que caduquen (7 días).
+async function reiniciarPassword(familiaId, usuarioId, solicitanteId) {
+  exigirAdmin(solicitanteId, familiaId);
+  if (Number(usuarioId) === solicitanteId) {
+    throw crearErrorHttp(400, 'Tu propia contraseña se cambia desde Ajustes');
+  }
+  if (obtenerFamiliaDeUsuario(usuarioId) !== Number(familiaId)) {
+    throw crearErrorHttp(404, 'Ese usuario no es miembro de tu familia');
+  }
+
+  let temporal = '';
+  for (let i = 0; i < 10; i++) temporal += ALFABETO_CODIGO[randomInt(ALFABETO_CODIGO.length)];
+  const hash = await bcrypt.hash(temporal, 10);
+  db.prepare('UPDATE usuarios SET password_hash = ? WHERE id = ?').run(hash, usuarioId);
+  return { password_temporal: temporal };
+}
+
 function renombrarFamilia(familiaId, nombre, solicitanteId) {
   exigirAdmin(solicitanteId, familiaId);
   db.prepare('UPDATE familias SET nombre = ? WHERE id = ?').run(nombre, familiaId);
@@ -176,6 +197,7 @@ module.exports = {
   exigirAdmin,
   salirDeFamilia,
   expulsarMiembro,
+  reiniciarPassword,
   renombrarFamilia,
   regenerarCodigo,
   crearFamilia,

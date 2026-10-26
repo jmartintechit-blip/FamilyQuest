@@ -17,6 +17,7 @@ router.get('/familias/:id/resumen-semanal', verificarToken, verificarPerteneceAF
 router.get('/familias/:id', verificarToken, verificarPerteneceAFamilia, familiasController.obtenerFamilia);
 router.put('/familias/:id', verificarToken, verificarPerteneceAFamilia, validar(familiasSchema.renombrarFamilia), familiasController.renombrarFamilia);
 router.post('/familias/:id/codigo', verificarToken, verificarPerteneceAFamilia, familiasController.regenerarCodigo);
+router.post('/familias/:id/usuarios/:usuarioId/reiniciar-password', verificarToken, verificarPerteneceAFamilia, familiasController.reiniciarPassword);
 router.delete('/familias/:id/usuarios/:usuarioId', verificarToken, verificarPerteneceAFamilia, familiasController.expulsarMiembro);
 
 module.exports = router;

@@ -104,6 +104,7 @@ export default function AjustesScreen() {
   const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
   const [passwordEliminar, setPasswordEliminar] = useState('');
   const [errorCarga, setErrorCarga] = useState(null);
+  const [passwordTemporal, setPasswordTemporal] = useState(null); // { nombre, valor }
 
   const soyAdmin = miembros.some((m) => m.id === usuario.id && m.rol === 'admin');
 
@@ -230,6 +231,18 @@ export default function AjustesScreen() {
       textoConfirmar: 'Quitar',
       alConfirmar: async () => {
         if (await llamarAdmin(`/familias/${usuario.familia_id}/usuarios/${miembro.id}`, 'DELETE')) cargarFamilia();
+      },
+    });
+  }
+
+  function confirmarReiniciarPassword(miembro) {
+    confirmar({
+      titulo: `¿Reiniciar la contraseña de ${miembro.nombre}?`,
+      mensaje: 'Se generará una contraseña temporal que tendrás que darle en persona. Su contraseña actual dejará de valer.',
+      textoConfirmar: 'Reiniciar',
+      alConfirmar: async () => {
+        const datos = await llamarAdmin(`/familias/${usuario.familia_id}/usuarios/${miembro.id}/reiniciar-password`, 'POST');
+        if (datos) setPasswordTemporal({ nombre: miembro.nombre, valor: datos.password_temporal });
       },
     });
   }
@@ -399,6 +412,16 @@ export default function AjustesScreen() {
             <Text style={styles.puntosMiembro}>{miembro.puntos_totales} pts</Text>
             {soyAdmin && miembro.id !== usuario.id && (
               <TouchableOpacity
+                onPress={() => confirmarReiniciarPassword(miembro)}
+                style={styles.botonIcono}
+                accessibilityRole="button"
+                accessibilityLabel={`Reiniciar la contraseña de ${miembro.nombre}`}
+              >
+                <Ionicons name="key-outline" size={20} color={colores.primario} />
+              </TouchableOpacity>
+            )}
+            {soyAdmin && miembro.id !== usuario.id && (
+              <TouchableOpacity
                 onPress={() => confirmarExpulsar(miembro)}
                 style={styles.botonIcono}
                 accessibilityRole="button"
@@ -454,6 +477,20 @@ export default function AjustesScreen() {
             <CampoTexto placeholder="Nombre de la familia" value={nombreFamilia} onChangeText={setNombreFamilia} maxLength={60} autoFocus />
             <BotonPrincipal titulo="Guardar" onPress={guardarNombreFamilia} />
             <BotonPrincipal titulo="Cancelar" variante="secundario" onPress={() => setModalNombreVisible(false)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={passwordTemporal !== null} transparent animationType="fade" onRequestClose={() => setPasswordTemporal(null)}>
+        <View style={styles.fondoModal}>
+          <View style={styles.tarjetaModal}>
+            <Text accessibilityRole="header" style={[tipografia.subtitulo, { marginBottom: espaciado.sm }]}>Contraseña temporal</Text>
+            <Text style={[tipografia.chico, { marginBottom: espaciado.sm }]}>
+              {passwordTemporal?.nombre} puede entrar con esta contraseña y cambiarla después en Ajustes. No se volverá a mostrar.
+            </Text>
+            <Text selectable style={styles.codigo}>{passwordTemporal?.valor}</Text>
+            <View style={{ height: espaciado.md }} />
+            <BotonPrincipal titulo="Entendido" onPress={() => setPasswordTemporal(null)} />
           </View>
         </View>
       </Modal>

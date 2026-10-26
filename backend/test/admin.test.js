@@ -88,6 +88,22 @@ test('renombrar y regenerar el código es cosa del administrador y el código vi
   await srv.llamar('PUT', `/usuarios/${nadie.id}/salir-familia`, { token: nadie.token });
 });
 
+test('el administrador reinicia la contraseña de un miembro y este entra con la temporal', async () => {
+  const ruta = (id) => `/familias/${familia.id}/usuarios/${id}/reiniciar-password`;
+  assert.equal((await srv.llamar('POST', ruta(lucia.id), { token: marcos.token })).status, 403);
+  assert.equal((await srv.llamar('POST', ruta(ana.id), { token: ana.token })).status, 400);
+  assert.equal((await srv.llamar('POST', ruta(99999), { token: ana.token })).status, 404);
+
+  const r = await srv.llamar('POST', ruta(lucia.id), { token: ana.token });
+  assert.equal(r.status, 200);
+  assert.match(r.datos.password_temporal, /^[A-HJ-NP-Z2-9]{10}$/);
+
+  const vieja = await srv.llamar('POST', '/login', { body: { email: lucia.email, password: lucia.password } });
+  assert.equal(vieja.status, 401);
+  const nueva = await srv.llamar('POST', '/login', { body: { email: lucia.email, password: r.datos.password_temporal } });
+  assert.equal(nueva.status, 200);
+});
+
 test('expulsar: solo el administrador, no a uno mismo y solo a miembros', async () => {
   const ruta = (id) => `/familias/${familia.id}/usuarios/${id}`;
   assert.equal((await srv.llamar('DELETE', ruta(lucia.id), { token: marcos.token })).status, 403);

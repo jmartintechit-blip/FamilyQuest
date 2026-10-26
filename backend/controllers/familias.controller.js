@@ -41,6 +41,14 @@ function regenerarCodigo(req, res) {
   }
 }
 
+async function reiniciarPassword(req, res) {
+  try {
+    res.json(await familiasService.reiniciarPassword(req.params.id, req.params.usuarioId, req.usuario.id));
+  } catch (error) {
+    res.status(error.status || 500).json({ error: error.message });
+  }
+}
+
 function expulsarMiembro(req, res) {
   try {
     familiasService.expulsarMiembro(req.params.id, req.params.usuarioId, req.usuario.id);
@@ -73,4 +81,4 @@ function obtenerFamilia(req, res) {
   }
 }
 
-module.exports = { crearFamilia, renombrarFamilia, regenerarCodigo, expulsarMiembro, unirseConCodigo, listarMiembros, salirDeFamilia, obtenerRanking, obtenerResumenSemanal, obtenerFamilia };
+module.exports = { crearFamilia, renombrarFamilia, regenerarCodigo, reiniciarPassword, expulsarMiembro, unirseConCodigo, listarMiembros, salirDeFamilia, obtenerRanking, obtenerResumenSemanal, obtenerFamilia };

@@ -30,7 +30,9 @@ async function arrancarServidor(entorno = {}) {
   for (let i = 0; i < 50; i++) {
     try {
       if ((await fetch(base + '/health')).ok) break;
-    } catch {}
+    } catch {
+      // todavía arrancando
+    }
     if (i === 49) throw new Error('El backend no arrancó en 10 s');
     await new Promise((r) => setTimeout(r, 200));
   }

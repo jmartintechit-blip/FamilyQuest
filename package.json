@@ -1,5 +1,16 @@
 {
-  "dependencies": {
-    "socket.io-client": "^4.8.3"
+  "name": "familyquest",
+  "private": true,
+  "description": "Repository tooling (lint). The app lives in backend/ and frontend/.",
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0"
   }
 }

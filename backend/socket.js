@@ -17,7 +17,6 @@ function configurarSocketIO(io) {
   });
 
   io.on('connection', (socket) => {
-    console.log('Alguien se ha conectado:', socket.id);
 
     // Solo se entra en la sala de la propia familia (el mismo criterio que
     // verificarPerteneceAFamilia). El callback es opcional: lo usan los tests.
@@ -25,14 +24,10 @@ function configurarSocketIO(io) {
       const permitido = obtenerFamiliaDeUsuario(socket.usuario.id) === Number(familia_id);
       if (permitido) {
         socket.join(`familia_${familia_id}`);
-        console.log(`Socket ${socket.id} se unió a familia_${familia_id}`);
       }
       if (typeof respuesta === 'function') respuesta({ ok: permitido });
     });
 
-    socket.on('disconnect', () => {
-      console.log('Alguien se ha desconectado:', socket.id);
-    });
   });
 }
 

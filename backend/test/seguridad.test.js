@@ -32,10 +32,10 @@ test('el login se limita tras demasiados intentos y devuelve 429', async () => {
 test('helmet añade cabeceras de seguridad y CORS solo admite localhost por defecto', async () => {
   const srv = await arrancarServidor();
   try {
-    const propio = await fetch(srv.base + '/', { headers: { Origin: 'http://localhost:8081' } });
+    const propio = await fetch(srv.base + '/health', { headers: { Origin: 'http://localhost:8081' } });
     assert.equal(propio.headers.get('access-control-allow-origin'), 'http://localhost:8081');
     assert.equal(propio.headers.get('x-content-type-options'), 'nosniff');
-    const ajeno = await fetch(srv.base + '/', { headers: { Origin: 'https://evil.example' } });
+    const ajeno = await fetch(srv.base + '/health', { headers: { Origin: 'https://evil.example' } });
     assert.equal(ajeno.headers.get('access-control-allow-origin'), null);
   } finally {
     await srv.parar();

@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const { Server } = require('socket.io');
 const { comprobarEntorno, origenesPermitidos } = require('./config');
 comprobarEntorno();
-require('./db/conexion');
+const db = require('./db/conexion');
 const configurarSocketIO = require('./socket');
 const authRoutes = require('./routes/auth.routes');
 const tareasRoutes = require('./routes/tareas.routes');
@@ -36,12 +36,20 @@ app.use(chatRoutes);
 app.use(mascotaRoutes);
 app.use(notificacionesRoutes);
 
-app.get('/', (req, res) => {
-    res.send('Hola Juan! Tu servidor está funcionando');
-});
+app.get('/health', (req, res) => res.json({ ok: true }));
 
 configurarSocketIO(io);
 
 servidor.listen(PUERTO, () => {
   console.log(`Servidor escuchando en http://localhost:${PUERTO}`);
 });
+
+// Cierre ordenado: deja de aceptar conexiones, cierra los sockets y la base de datos.
+function cerrar() {
+  io.close(() => {
+    db.close();
+    process.exit(0);
+  });
+}
+process.on('SIGINT', cerrar);
+process.on('SIGTERM', cerrar);

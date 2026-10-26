@@ -1,14 +1,12 @@
 {
   "name": "app-familia",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "FamilyQuest API: Express, SQLite and Socket.IO",
   "scripts": {
+    "start": "node index.js",
     "test": "node --test \"test/*.test.js\""
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -26,5 +24,14 @@
   },
   "devDependencies": {
     "socket.io-client": "^4.8.4"
-  }
+  },
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmartintechit-blip/FamilyQuest.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "index.js"
 }

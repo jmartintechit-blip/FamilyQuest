@@ -2,14 +2,13 @@
   "name": "frontend",
   "main": "node_modules/expo/AppEntry.js",
   "version": "1.0.0",
-  "description": "",
+  "description": "FamilyQuest mobile and web app built with Expo",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
   },
-  "keywords": [],
   "type": "commonjs",
   "dependencies": {
     "@expo-google-fonts/nunito": "^0.4.2",
@@ -39,5 +38,11 @@
   },
   "devDependencies": {
     "babel-preset-expo": "^57.0.11"
+  },
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmartintechit-blip/FamilyQuest.git"
   }
 }

@@ -159,7 +159,7 @@ export default function MascotaHero({ salud, puntosFlotantes = [], nombre, onPre
         </Svg>
       </Animated.View>
 
-      <TouchableOpacity onPress={onPresionarNombre} style={estilos.filaNombre} activeOpacity={0.6}>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Cambiar el nombre de la mascota, ${nombre}`} onPress={onPresionarNombre} style={estilos.filaNombre} activeOpacity={0.6}>
         <Text style={estilos.nombre}>{nombre}</Text>
         <Ionicons name="pencil-outline" size={14} color={colores.textoSuave} />
       </TouchableOpacity>

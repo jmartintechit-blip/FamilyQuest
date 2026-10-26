@@ -91,7 +91,7 @@ export default function AuthScreen() {
         <BotonPrincipal titulo="Iniciar sesión" onPress={iniciarSesion} />
       )}
 
-      <TouchableOpacity onPress={() => setModoRegistro(!modoRegistro)} style={{ marginTop: espaciado.md }}>
+      <TouchableOpacity accessibilityRole="button" onPress={() => setModoRegistro(!modoRegistro)} style={{ marginTop: espaciado.md }}>
         <Text style={styles.enlace}>
           {modoRegistro ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
         </Text>

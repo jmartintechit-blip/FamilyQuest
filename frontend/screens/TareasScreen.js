@@ -8,6 +8,8 @@ import { useTema } from '../context/TemaContext';
 import CampoTexto from '../components/CampoTexto';
 import BotonPrincipal from '../components/BotonPrincipal';
 import TareaItem from '../components/TareaItem';
+import HistorialModal from '../components/HistorialModal';
+import { confirmar } from '../utils/confirmar';
 
 const FILTROS = [
   { valor: 'todas', etiqueta: 'Todas' },
@@ -26,17 +28,27 @@ export default function TareasScreen() {
   const [nombreNueva, setNombreNueva] = useState('');
   const [tipoNueva, setTipoNueva] = useState('positiva');
   const [puntosNueva, setPuntosNueva] = useState('');
+  const [esAdmin, setEsAdmin] = useState(false);
+  const [tareaEditando, setTareaEditando] = useState(null);
+  const [historialVisible, setHistorialVisible] = useState(false);
+  const [errorCarga, setErrorCarga] = useState(null);
 
   async function cargarTareas() {
     try {
-      const respuesta = await fetch(`${URL_BASE}/familias/${usuario.familia_id}/tareas`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!respuesta.ok) return;
-      const datos = await respuesta.json();
-      setTareas(datos);
-    } catch (error) {
-      console.log('Error cargando tareas', error);
+      const cabecera = { headers: { 'Authorization': `Bearer ${token}` } };
+      const [respuestaTareas, respuestaMiembros] = await Promise.all([
+        fetch(`${URL_BASE}/familias/${usuario.familia_id}/tareas`, cabecera),
+        fetch(`${URL_BASE}/familias/${usuario.familia_id}/usuarios`, cabecera),
+      ]);
+      if (!respuestaTareas.ok) throw new Error();
+      setTareas(await respuestaTareas.json());
+      if (respuestaMiembros.ok) {
+        const miembros = await respuestaMiembros.json();
+        setEsAdmin(miembros.some((m) => m.id === usuario.id && m.rol === 'admin'));
+      }
+      setErrorCarga(null);
+    } catch {
+      setErrorCarga('No se pudieron cargar las tareas. Comprueba la conexión.');
     }
   }
 
@@ -71,10 +83,12 @@ export default function TareasScreen() {
   }
 
   function confirmarEliminarTarea(tareaId) {
-    Alert.alert('¿Eliminar tarea?', 'Esto no borra el historial de puntos ya ganados con ella.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => eliminarTarea(tareaId) },
-    ]);
+    confirmar({
+      titulo: '¿Eliminar tarea?',
+      mensaje: 'Esto no borra el historial de puntos ya ganados con ella.',
+      textoConfirmar: 'Eliminar',
+      alConfirmar: () => eliminarTarea(tareaId),
+    });
   }
 
   async function eliminarTarea(tareaId) {
@@ -96,14 +110,15 @@ export default function TareasScreen() {
     }
   }
 
-  function abrirModal() {
-    setNombreNueva('');
-    setTipoNueva('positiva');
-    setPuntosNueva('');
+  function abrirModal(tarea = null) {
+    setTareaEditando(tarea);
+    setNombreNueva(tarea ? tarea.nombre : '');
+    setTipoNueva(tarea ? tarea.tipo : 'positiva');
+    setPuntosNueva(tarea ? String(Math.abs(tarea.puntos_valor)) : '');
     setModalVisible(true);
   }
 
-  async function crearTarea() {
+  async function guardarTarea() {
     const magnitud = parseInt(puntosNueva, 10);
 
     if (!nombreNueva.trim()) {
@@ -116,14 +131,14 @@ export default function TareasScreen() {
     }
 
     try {
-      const respuesta = await fetch(`${URL_BASE}/tareas`, {
-        method: 'POST',
+      const respuesta = await fetch(tareaEditando ? `${URL_BASE}/tareas/${tareaEditando.id}` : `${URL_BASE}/tareas`, {
+        method: tareaEditando ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          familia_id: usuario.familia_id,
+          ...(tareaEditando ? {} : { familia_id: usuario.familia_id }),
           nombre: nombreNueva.trim(),
           puntos_valor: tipoNueva === 'positiva' ? magnitud : -magnitud,
           tipo: tipoNueva,
@@ -140,7 +155,7 @@ export default function TareasScreen() {
       setModalVisible(false);
       cargarTareas();
     } catch (error) {
-      Alert.alert('Error de conexión', 'No se pudo crear la tarea');
+      Alert.alert('Error de conexión', 'No se pudo guardar la tarea');
     }
   }
 
@@ -153,7 +168,26 @@ export default function TareasScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={{ padding: espaciado.md, paddingTop: 60, paddingBottom: 100 }}>
-        <Text style={[tipografia.tituloGrande, { marginBottom: espaciado.md }]}>Tareas</Text>
+        <View style={styles.filaTitulo}>
+          <Text accessibilityRole="header" style={tipografia.tituloGrande}>Tareas</Text>
+          <TouchableOpacity
+            onPress={() => setHistorialVisible(true)}
+            style={styles.botonHistorial}
+            accessibilityRole="button"
+            accessibilityLabel="Ver el historial de actividad"
+          >
+            <Ionicons name="time-outline" size={22} color={colores.primario} />
+          </TouchableOpacity>
+        </View>
+
+        {errorCarga && (
+          <View style={styles.error} accessibilityRole="alert">
+            <Text style={styles.textoError}>{errorCarga}</Text>
+            <TouchableOpacity onPress={cargarTareas} accessibilityRole="button" accessibilityLabel="Reintentar">
+              <Text style={styles.reintentar}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.filaBusqueda}>
           <Ionicons name="search-outline" size={18} color={colores.textoSuave} />
@@ -169,6 +203,8 @@ export default function TareasScreen() {
               <TouchableOpacity
                 key={f.valor}
                 onPress={() => setFiltro(f.valor)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: activo }}
                 style={[styles.chip, activo && styles.chipActivo]}
               >
                 <Text style={activo ? styles.textoChipActivo : styles.textoChip}>{f.etiqueta}</Text>
@@ -188,20 +224,28 @@ export default function TareasScreen() {
             </Text>
           ) : (
             tareasFiltradas.map((tarea) => (
-              <TareaItem key={tarea.id} tarea={tarea} onMarcar={marcarTareaHecha} onEliminar={confirmarEliminarTarea} />
+              <TareaItem
+                key={tarea.id}
+                tarea={tarea}
+                onMarcar={marcarTareaHecha}
+                onEditar={esAdmin ? abrirModal : undefined}
+                onEliminar={esAdmin ? confirmarEliminarTarea : undefined}
+              />
             ))
           )}
         </View>
       </ScrollView>
 
       <View style={styles.filaBotonFlotante}>
-        <BotonPrincipal titulo="Nueva tarea" onPress={abrirModal} />
+        <BotonPrincipal titulo="Nueva tarea" onPress={() => abrirModal()} />
       </View>
 
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.fondoModal}>
           <View style={styles.tarjetaModal}>
-            <Text style={[tipografia.subtitulo, { marginBottom: espaciado.sm }]}>Nueva tarea</Text>
+            <Text accessibilityRole="header" style={[tipografia.subtitulo, { marginBottom: espaciado.sm }]}>
+              {tareaEditando ? 'Editar tarea' : 'Nueva tarea'}
+            </Text>
             <CampoTexto
               placeholder="Nombre de la tarea"
               value={nombreNueva}
@@ -212,6 +256,8 @@ export default function TareasScreen() {
             <View style={styles.filaTipo}>
               <TouchableOpacity
                 onPress={() => setTipoNueva('positiva')}
+                accessibilityRole="button"
+                accessibilityState={{ selected: tipoNueva === 'positiva' }}
                 style={[styles.opcionTipo, tipoNueva === 'positiva' && styles.opcionTipoActiva]}
               >
                 <Ionicons
@@ -223,6 +269,8 @@ export default function TareasScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setTipoNueva('negativa')}
+                accessibilityRole="button"
+                accessibilityState={{ selected: tipoNueva === 'negativa' }}
                 style={[styles.opcionTipo, tipoNueva === 'negativa' && styles.opcionTipoActiva]}
               >
                 <Ionicons
@@ -239,11 +287,13 @@ export default function TareasScreen() {
               onChangeText={setPuntosNueva}
               keyboardType="numeric"
             />
-            <BotonPrincipal titulo="Crear tarea" onPress={crearTarea} />
+            <BotonPrincipal titulo={tareaEditando ? 'Guardar cambios' : 'Crear tarea'} onPress={guardarTarea} />
             <BotonPrincipal titulo="Cancelar" variante="secundario" onPress={() => setModalVisible(false)} />
           </View>
         </View>
       </Modal>
+
+      <HistorialModal visible={historialVisible} onCerrar={() => setHistorialVisible(false)} />
     </View>
   );
 }
@@ -253,6 +303,35 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
     container: {
       flex: 1,
       backgroundColor: colores.fondo,
+    },
+    filaTitulo: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: espaciado.md,
+    },
+    botonHistorial: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colores.primarioSuave,
+      borderRadius: radios.md,
+    },
+    error: {
+      backgroundColor: colores.errorSuave,
+      borderRadius: radios.md,
+      padding: espaciado.sm,
+      marginBottom: espaciado.sm,
+    },
+    textoError: {
+      ...tipografia.chico,
+      color: colores.error,
+    },
+    reintentar: {
+      ...tipografia.chico,
+      color: colores.primario,
+      marginTop: espaciado.xs,
     },
     filaBusqueda: {
       flexDirection: 'row',

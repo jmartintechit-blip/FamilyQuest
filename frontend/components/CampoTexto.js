@@ -10,6 +10,7 @@ export default function CampoTexto({ etiqueta, ...propsInput }) {
       {etiqueta && <Text style={estilos.etiqueta}>{etiqueta}</Text>}
       <TextInput
         style={estilos.input}
+        accessibilityLabel={etiqueta || propsInput.placeholder}
         placeholderTextColor={colores.textoSuave}
         {...propsInput}
       />

@@ -296,32 +296,6 @@ export default function InicioScreen() {
     }
   }
 
-  function confirmarEliminarTarea(tareaId) {
-    Alert.alert('¿Eliminar tarea?', 'Esto no borra el historial de puntos ya ganados con ella.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => eliminarTarea(tareaId) },
-    ]);
-  }
-
-  async function eliminarTarea(tareaId) {
-    try {
-      const respuesta = await fetch(`${URL_BASE}/tareas/${tareaId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      if (!respuesta.ok) {
-        const datos = await respuesta.json();
-        Alert.alert('Error', datos.error);
-        return;
-      }
-
-      cargarTareas();
-    } catch (error) {
-      Alert.alert('Error de conexión', 'No se pudo eliminar la tarea');
-    }
-  }
-
   // Demo del "modo caos": activa un evento de ejemplo unos segundos.
   // Sustituir por la lógica real en cuanto el backend genere estos eventos.
   function simularEventoEspecial() {
@@ -345,7 +319,7 @@ export default function InicioScreen() {
         cosmeticosEquipados={cosmeticosEquipados}
       />
 
-      <TouchableOpacity onPress={() => setSelectorMascotaVisible(true)} style={styles.filaMonedas}>
+      <TouchableOpacity accessibilityRole="button" onPress={() => setSelectorMascotaVisible(true)} style={styles.filaMonedas}>
         <View style={styles.filaMonedasIzquierda}>
           <Ionicons name="logo-bitcoin" size={18} color={colores.doradoOscuro} />
           <Text style={styles.textoMonedas}>{monedas} monedas</Text>
@@ -356,26 +330,26 @@ export default function InicioScreen() {
       <Tarjeta>
         <View style={styles.filaSeccion}>
           <Text style={styles.seccion}>Tus tareas</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Tareas')} style={styles.filaAnadir}>
+          <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('Tareas')} style={styles.filaAnadir}>
             <Ionicons name="add" size={16} color={colores.primario} />
             <Text style={styles.enlaceCambiar}>Añadir</Text>
           </TouchableOpacity>
         </View>
         {tareas.slice(0, 5).map((tarea) => (
-          <TareaItem key={tarea.id} tarea={tarea} onMarcar={marcarTareaHecha} onEliminar={confirmarEliminarTarea} />
+          <TareaItem key={tarea.id} tarea={tarea} onMarcar={marcarTareaHecha} />
         ))}
         {tareas.length === 0 && (
           <Text style={[tipografia.cuerpoSuave, { textAlign: 'center', paddingVertical: espaciado.sm }]}>
             Aún no hay tareas
           </Text>
         )}
-        <TouchableOpacity onPress={() => navigation.navigate('Tareas')} style={styles.filaVerMas}>
+        <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('Tareas')} style={styles.filaVerMas}>
           <Text style={styles.enlaceCambiar}>Ver todas las tareas</Text>
           <Ionicons name="chevron-forward" size={16} color={colores.primario} />
         </TouchableOpacity>
       </Tarjeta>
 
-      <TouchableOpacity onPress={simularEventoEspecial} style={styles.filaDemo}>
+      <TouchableOpacity accessibilityRole="button" onPress={simularEventoEspecial} style={styles.filaDemo}>
         <Ionicons name="flash-outline" size={14} color={colores.doradoOscuro} />
         <Text style={styles.enlaceDemo}>Simular evento especial (demo)</Text>
       </TouchableOpacity>

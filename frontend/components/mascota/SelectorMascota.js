@@ -21,7 +21,7 @@ function FilaOpcion({ colorSwatch, icono, nombre, desbloqueado, activo, costo, a
       <Text style={[tipografia.cuerpo, { flex: 1 }]}>{nombre}</Text>
 
       {desbloqueado ? (
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={() => (activo ? onQuitar?.() : onElegir())}
           style={[estilos.boton, activo ? estilos.botonActivo : estilos.botonSecundario]}
         >
@@ -30,7 +30,8 @@ function FilaOpcion({ colorSwatch, icono, nombre, desbloqueado, activo, costo, a
           </Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
+          accessibilityLabel={`Desbloquear por ${costo} monedas`}
           onPress={() => alcanza && onDesbloquear()}
           disabled={!alcanza}
           style={[estilos.boton, estilos.botonConIcono, alcanza ? estilos.botonSecundario : estilos.botonDeshabilitado]}
@@ -75,10 +76,10 @@ export default function SelectorMascota({
           </View>
 
           <View style={estilos.pestanas}>
-            <TouchableOpacity onPress={() => setPestana('mascota')} style={[estilos.pestana, pestana === 'mascota' && estilos.pestanaActiva]}>
+            <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: pestana === 'mascota' }} onPress={() => setPestana('mascota')} style={[estilos.pestana, pestana === 'mascota' && estilos.pestanaActiva]}>
               <Text style={pestana === 'mascota' ? estilos.textoPestanaActiva : estilos.textoPestana}>Mascota</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setPestana('complementos')} style={[estilos.pestana, pestana === 'complementos' && estilos.pestanaActiva]}>
+            <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: pestana === 'complementos' }} onPress={() => setPestana('complementos')} style={[estilos.pestana, pestana === 'complementos' && estilos.pestanaActiva]}>
               <Text style={pestana === 'complementos' ? estilos.textoPestanaActiva : estilos.textoPestana}>Complementos</Text>
             </TouchableOpacity>
           </View>
@@ -129,7 +130,7 @@ export default function SelectorMascota({
                 ))}
           </ScrollView>
 
-          <TouchableOpacity onPress={onClose} style={estilos.cerrar}>
+          <TouchableOpacity accessibilityRole="button" onPress={onClose} style={estilos.cerrar}>
             <Text style={{ color: colores.primario }}>Cerrar</Text>
           </TouchableOpacity>
         </View>

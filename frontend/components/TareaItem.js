@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming } from 'react-native-reanimated';
 import { useTema } from '../context/TemaContext';
 
-export default function TareaItem({ tarea, onMarcar, onEliminar }) {
+export default function TareaItem({ tarea, onMarcar, onEditar, onEliminar }) {
   const { colores, tipografia, espaciado, radios } = useTema();
   const estilos = crearEstilos(colores, tipografia, espaciado, radios);
   const escala = useSharedValue(1);
@@ -25,16 +25,40 @@ export default function TareaItem({ tarea, onMarcar, onEliminar }) {
         size={22}
         color={esPositiva ? colores.primario : colores.error}
         style={estilos.icono}
+        accessibilityElementsHidden
+        importantForAccessibility="no"
       />
       <Text style={[tipografia.cuerpo, estilos.nombre]}>
         {tarea.nombre} ({tarea.puntos_valor > 0 ? '+' : ''}{tarea.puntos_valor})
       </Text>
-      {onEliminar && (
-        <TouchableOpacity onPress={() => onEliminar(tarea.id)} style={estilos.botonEliminar}>
-          <Ionicons name="trash-outline" size={18} color={colores.textoSuave} />
+      {onEditar && (
+        <TouchableOpacity
+          onPress={() => onEditar(tarea)}
+          style={estilos.botonIcono}
+          accessibilityRole="button"
+          accessibilityLabel={`Editar la tarea ${tarea.nombre}`}
+          hitSlop={8}
+        >
+          <Ionicons name="create-outline" size={20} color={colores.textoSuave} />
         </TouchableOpacity>
       )}
-      <TouchableOpacity onPress={alMarcar} style={estilos.boton}>
+      {onEliminar && (
+        <TouchableOpacity
+          onPress={() => onEliminar(tarea.id)}
+          style={estilos.botonIcono}
+          accessibilityRole="button"
+          accessibilityLabel={`Eliminar la tarea ${tarea.nombre}`}
+          hitSlop={8}
+        >
+          <Ionicons name="trash-outline" size={20} color={colores.textoSuave} />
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity
+        onPress={alMarcar}
+        style={estilos.boton}
+        accessibilityRole="button"
+        accessibilityLabel={`Marcar hecha: ${tarea.nombre}`}
+      >
         <Text style={estilos.textoBoton}>Marcar hecha</Text>
       </TouchableOpacity>
     </Animated.View>
@@ -56,15 +80,17 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
     nombre: {
       flex: 1,
     },
-    botonEliminar: {
+    botonIcono: {
       paddingHorizontal: espaciado.xs,
       marginRight: espaciado.xs,
     },
     boton: {
       backgroundColor: colores.primarioSuave,
       borderRadius: radios.sm,
-      paddingVertical: espaciado.xs,
+      paddingVertical: espaciado.sm,
       paddingHorizontal: espaciado.sm,
+      minHeight: 44,
+      justifyContent: 'center',
     },
     textoBoton: {
       ...tipografia.chico,

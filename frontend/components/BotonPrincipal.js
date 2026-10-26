@@ -12,6 +12,9 @@ export default function BotonPrincipal({ titulo, onPress, variante = 'primario',
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={titulo}
+      accessibilityState={{ disabled }}
       style={[
         estilos.boton,
         esSecundario ? estilos.botonSecundario : estilos.botonPrimario,

@@ -5,13 +5,14 @@
 // letra que haya elegido la familia. Aquí solo se define el contenido de
 // cada paleta — quien quiera los valores "en vivo" debe usar useTema().
 
+// Colores ajustados para contraste WCAG AA (4.5:1 en texto normal): ver las notas de la 0.2.0.
 export const paletaClara = {
   fondo: '#F6FAF7',
   superficie: '#FFFFFF',
   superficieSuave: '#EEF4F0',
 
-  primario: '#2FA35D',
-  primarioOscuro: '#1F7A45',
+  primario: '#1B7F45',
+  primarioOscuro: '#165C34',
   primarioSuave: '#DBF3E3',
 
   acento: '#FF8A65',
@@ -22,11 +23,11 @@ export const paletaClara = {
   doradoOscuro: '#8A5A00',
 
   texto: '#2B2E2C',
-  textoSuave: '#767F7A',
+  textoSuave: '#5F6963',
   textoSobrePrimario: '#FFFFFF',
 
   borde: '#E1E8E3',
-  error: '#E0574F',
+  error: '#C2362E',
   errorSuave: '#FCE4E1',
 };
 
@@ -36,7 +37,7 @@ export const paletaOscura = {
   superficieSuave: '#242D28',
 
   primario: '#3DBE75',
-  primarioOscuro: '#2FA35D',
+  primarioOscuro: '#6FD99A',
   primarioSuave: '#1F3A2A',
 
   acento: '#FF9670',

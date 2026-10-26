@@ -95,7 +95,7 @@ export default function FamiliaSetupScreen({ onSaltar }) {
       />
       <BotonPrincipal titulo="Unirme a familia" variante="secundario" onPress={unirseAFamilia} />
 
-      <TouchableOpacity onPress={onSaltar} style={{ marginTop: espaciado.lg }}>
+      <TouchableOpacity accessibilityRole="button" onPress={onSaltar} style={{ marginTop: espaciado.lg }}>
         <Text style={styles.enlace}>Saltar por ahora</Text>
       </TouchableOpacity>
     </View>

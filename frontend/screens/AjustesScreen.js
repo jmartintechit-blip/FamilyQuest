@@ -10,6 +10,8 @@ import { TAMANOS_FUENTE } from '../theme';
 import BotonPrincipal from '../components/BotonPrincipal';
 import CampoTexto from '../components/CampoTexto';
 import Tarjeta from '../components/Tarjeta';
+import HistorialModal from '../components/HistorialModal';
+import { confirmar } from '../utils/confirmar';
 
 const OPCIONES_MODO = [
   { valor: 'sistema', etiqueta: 'Automático' },
@@ -45,6 +47,8 @@ function SelectorSegmentado({ opciones, valorActual, onCambiar, colores, tipogra
           <TouchableOpacity
             key={opcion.valor}
             onPress={() => onCambiar(opcion.valor)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activo }}
             style={[estilos.segmento, activo && estilos.segmentoActivo]}
           >
             <Text style={activo ? estilos.textoActivo : estilos.texto}>{opcion.etiqueta}</Text>
@@ -94,6 +98,14 @@ export default function AjustesScreen() {
   const [passwordNueva, setPasswordNueva] = useState('');
   const [passwordConfirmar, setPasswordConfirmar] = useState('');
   const [cambiandoPassword, setCambiandoPassword] = useState(false);
+  const [historialVisible, setHistorialVisible] = useState(false);
+  const [modalNombreVisible, setModalNombreVisible] = useState(false);
+  const [nombreFamilia, setNombreFamilia] = useState('');
+  const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
+  const [passwordEliminar, setPasswordEliminar] = useState('');
+  const [errorCarga, setErrorCarga] = useState(null);
+
+  const soyAdmin = miembros.some((m) => m.id === usuario.id && m.rol === 'admin');
 
   const opcionesTamano = Object.keys(TAMANOS_FUENTE).map((clave) => ({
     valor: clave,
@@ -109,8 +121,9 @@ export default function AjustesScreen() {
       ]);
       if (respuestaFamilia.ok) setFamilia(await respuestaFamilia.json());
       if (respuestaMiembros.ok) setMiembros(await respuestaMiembros.json());
-    } catch (error) {
-      console.log('Error cargando datos de familia', error);
+      setErrorCarga(null);
+    } catch {
+      setErrorCarga('No se pudieron cargar los datos de la familia. Comprueba la conexión.');
     }
   }
 
@@ -136,14 +149,12 @@ export default function AjustesScreen() {
   }
 
   function confirmarSalirDeFamilia() {
-    Alert.alert(
-      '¿Salir de la familia?',
-      'Perderás tus puntos actuales y dejarás de ver sus tareas, ranking y chat. Podrás unirte de nuevo con un código de invitación.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', style: 'destructive', onPress: salirDeFamilia },
-      ]
-    );
+    confirmar({
+      titulo: '¿Salir de la familia?',
+      mensaje: 'Perderás tus puntos actuales y dejarás de ver sus tareas, ranking y chat. Podrás unirte de nuevo con un código de invitación.',
+      textoConfirmar: 'Salir',
+      alConfirmar: salirDeFamilia,
+    });
   }
 
   async function salirDeFamilia() {
@@ -162,6 +173,75 @@ export default function AjustesScreen() {
       await actualizarUsuario({ familia_id: null });
     } catch (error) {
       Alert.alert('Error de conexión', 'No se pudo salir de la familia');
+    }
+  }
+
+  // Llamada genérica de administración: avisa con un Alert si el servidor responde con error.
+  async function llamarAdmin(ruta, metodo, body) {
+    try {
+      const respuesta = await fetch(`${URL_BASE}${ruta}`, {
+        method: metodo,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const datos = await respuesta.json();
+      if (!respuesta.ok) {
+        Alert.alert('Error', datos.error);
+        return null;
+      }
+      return datos;
+    } catch {
+      Alert.alert('Error de conexión', 'No se pudo conectar con el servidor');
+      return null;
+    }
+  }
+
+  function abrirModalNombre() {
+    setNombreFamilia(familia.nombre);
+    setModalNombreVisible(true);
+  }
+
+  async function guardarNombreFamilia() {
+    if (!nombreFamilia.trim()) {
+      Alert.alert('Falta el nombre', 'Escribe un nombre para la familia');
+      return;
+    }
+    if (await llamarAdmin(`/familias/${usuario.familia_id}`, 'PUT', { nombre: nombreFamilia.trim() })) {
+      setModalNombreVisible(false);
+      cargarFamilia();
+    }
+  }
+
+  function confirmarRegenerarCodigo() {
+    confirmar({
+      titulo: '¿Generar un código nuevo?',
+      mensaje: 'El código actual dejará de funcionar. Quienes ya están en la familia no se ven afectados.',
+      textoConfirmar: 'Generar',
+      alConfirmar: async () => {
+        if (await llamarAdmin(`/familias/${usuario.familia_id}/codigo`, 'POST')) cargarFamilia();
+      },
+    });
+  }
+
+  function confirmarExpulsar(miembro) {
+    confirmar({
+      titulo: `¿Quitar a ${miembro.nombre}?`,
+      mensaje: 'Saldrá de la familia y perderá sus puntos actuales. Podrá volver con un código de invitación.',
+      textoConfirmar: 'Quitar',
+      alConfirmar: async () => {
+        if (await llamarAdmin(`/familias/${usuario.familia_id}/usuarios/${miembro.id}`, 'DELETE')) cargarFamilia();
+      },
+    });
+  }
+
+  async function eliminarCuenta() {
+    if (!passwordEliminar) {
+      Alert.alert('Falta la contraseña', 'Escribe tu contraseña para confirmar');
+      return;
+    }
+    if (await llamarAdmin(`/usuarios/${usuario.id}`, 'DELETE', { password: passwordEliminar })) {
+      setModalEliminarVisible(false);
+      await cerrarSesion();
     }
   }
 
@@ -215,7 +295,16 @@ export default function AjustesScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: espaciado.md, paddingTop: 60 }}>
-      <Text style={[tipografia.tituloGrande, { marginBottom: espaciado.md }]}>Ajustes</Text>
+      <Text accessibilityRole="header" style={[tipografia.tituloGrande, { marginBottom: espaciado.md }]}>Ajustes</Text>
+
+      {errorCarga && (
+        <View style={styles.error} accessibilityRole="alert">
+          <Text style={styles.textoError}>{errorCarga}</Text>
+          <TouchableOpacity onPress={cargarFamilia} accessibilityRole="button" accessibilityLabel="Reintentar">
+            <Text style={styles.enlaceCambiarPassword}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Tarjeta>
         <Text style={tipografia.subtitulo}>{usuario.nombre}</Text>
@@ -257,19 +346,41 @@ export default function AjustesScreen() {
 
         {familia && (
           <>
-            <Text style={tipografia.cuerpo}>{familia.nombre}</Text>
+            <View style={styles.filaNombreFamilia}>
+              <Text style={tipografia.cuerpo}>{familia.nombre}</Text>
+              {soyAdmin && (
+                <TouchableOpacity
+                  onPress={abrirModalNombre}
+                  style={styles.botonIcono}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cambiar el nombre de la familia"
+                >
+                  <Ionicons name="create-outline" size={20} color={colores.primario} />
+                </TouchableOpacity>
+              )}
+            </View>
             <View style={styles.filaCodigo}>
               <View>
                 <Text style={tipografia.cuerpoSuave}>Código de invitación</Text>
                 <Text style={styles.codigo}>{familia.codigo_invitacion}</Text>
               </View>
               <View style={styles.filaBotonesCodigo}>
-                <TouchableOpacity onPress={copiarCodigo} style={styles.botonIcono}>
+                <TouchableOpacity onPress={copiarCodigo} style={styles.botonIcono} accessibilityRole="button" accessibilityLabel="Copiar el código de invitación">
                   <Ionicons name="copy-outline" size={20} color={colores.primario} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={compartirCodigo} style={styles.botonIcono}>
+                <TouchableOpacity onPress={compartirCodigo} style={styles.botonIcono} accessibilityRole="button" accessibilityLabel="Compartir el código de invitación">
                   <Ionicons name="share-social-outline" size={20} color={colores.primario} />
                 </TouchableOpacity>
+                {soyAdmin && (
+                  <TouchableOpacity
+                    onPress={confirmarRegenerarCodigo}
+                    style={styles.botonIcono}
+                    accessibilityRole="button"
+                    accessibilityLabel="Generar un código de invitación nuevo"
+                  >
+                    <Ionicons name="refresh-outline" size={20} color={colores.primario} />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </>
@@ -280,13 +391,34 @@ export default function AjustesScreen() {
         </Text>
         {miembros.map((miembro) => (
           <View key={miembro.id} style={styles.filaMiembro}>
-            <Text style={tipografia.cuerpo}>
+            <Text style={[tipografia.cuerpo, { flex: 1 }]}>
               {miembro.nombre}
               {miembro.id === usuario.id ? ' (tú)' : ''}
+              {miembro.rol === 'admin' ? ' · admin' : ''}
             </Text>
             <Text style={styles.puntosMiembro}>{miembro.puntos_totales} pts</Text>
+            {soyAdmin && miembro.id !== usuario.id && (
+              <TouchableOpacity
+                onPress={() => confirmarExpulsar(miembro)}
+                style={styles.botonIcono}
+                accessibilityRole="button"
+                accessibilityLabel={`Quitar a ${miembro.nombre} de la familia`}
+              >
+                <Ionicons name="person-remove-outline" size={20} color={colores.error} />
+              </TouchableOpacity>
+            )}
           </View>
         ))}
+
+        <TouchableOpacity
+          onPress={() => setHistorialVisible(true)}
+          style={styles.filaCambiarPassword}
+          accessibilityRole="button"
+          accessibilityLabel="Ver el historial de actividad"
+        >
+          <Ionicons name="time-outline" size={16} color={colores.primario} />
+          <Text style={styles.enlaceCambiarPassword}>Historial de actividad</Text>
+        </TouchableOpacity>
       </Tarjeta>
 
       <Tarjeta>
@@ -304,6 +436,41 @@ export default function AjustesScreen() {
 
       <BotonPrincipal titulo="Salir de la familia" variante="secundario" onPress={confirmarSalirDeFamilia} />
       <BotonPrincipal titulo="Cerrar sesión" variante="secundario" onPress={cerrarSesion} />
+      <TouchableOpacity
+        onPress={() => { setPasswordEliminar(''); setModalEliminarVisible(true); }}
+        style={styles.enlaceEliminar}
+        accessibilityRole="button"
+        accessibilityLabel="Eliminar mi cuenta"
+      >
+        <Text style={styles.textoEliminar}>Eliminar mi cuenta</Text>
+      </TouchableOpacity>
+
+      <HistorialModal visible={historialVisible} onCerrar={() => setHistorialVisible(false)} />
+
+      <Modal visible={modalNombreVisible} transparent animationType="fade" onRequestClose={() => setModalNombreVisible(false)}>
+        <View style={styles.fondoModal}>
+          <View style={styles.tarjetaModal}>
+            <Text accessibilityRole="header" style={[tipografia.subtitulo, { marginBottom: espaciado.sm }]}>Nombre de la familia</Text>
+            <CampoTexto placeholder="Nombre de la familia" value={nombreFamilia} onChangeText={setNombreFamilia} maxLength={60} autoFocus />
+            <BotonPrincipal titulo="Guardar" onPress={guardarNombreFamilia} />
+            <BotonPrincipal titulo="Cancelar" variante="secundario" onPress={() => setModalNombreVisible(false)} />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalEliminarVisible} transparent animationType="fade" onRequestClose={() => setModalEliminarVisible(false)}>
+        <View style={styles.fondoModal}>
+          <View style={styles.tarjetaModal}>
+            <Text accessibilityRole="header" style={[tipografia.subtitulo, { marginBottom: espaciado.sm }]}>Eliminar mi cuenta</Text>
+            <Text style={[tipografia.chico, { marginBottom: espaciado.md }]}>
+              Se borrarán tu cuenta, tus mensajes, tus notificaciones y tus puntos. Si eres la última persona de la familia, también se borrará la familia. No se puede deshacer.
+            </Text>
+            <CampoTexto placeholder="Tu contraseña" value={passwordEliminar} onChangeText={setPasswordEliminar} secureTextEntry />
+            <BotonPrincipal titulo="Eliminar para siempre" onPress={eliminarCuenta} />
+            <BotonPrincipal titulo="Cancelar" variante="secundario" onPress={() => setModalEliminarVisible(false)} />
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={modalPasswordVisible} transparent animationType="fade" onRequestClose={() => setModalPasswordVisible(false)}>
         <View style={styles.fondoModal}>
@@ -351,6 +518,7 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       alignItems: 'center',
       gap: 4,
       marginTop: espaciado.sm,
+      minHeight: 44,
     },
     enlaceCambiarPassword: {
       ...tipografia.chico,
@@ -384,6 +552,10 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
       gap: espaciado.sm,
     },
     botonIcono: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
       padding: espaciado.xs,
       backgroundColor: colores.primarioSuave,
       borderRadius: radios.sm,
@@ -395,8 +567,35 @@ function crearEstilos(colores, tipografia, espaciado, radios) {
     },
     filaMiembro: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: espaciado.sm,
       paddingVertical: espaciado.xs,
+    },
+    filaNombreFamilia: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    enlaceEliminar: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 44,
+      marginBottom: espaciado.lg,
+    },
+    textoEliminar: {
+      ...tipografia.chico,
+      color: colores.error,
+      textDecorationLine: 'underline',
+    },
+    error: {
+      backgroundColor: colores.errorSuave,
+      borderRadius: radios.md,
+      padding: espaciado.sm,
+      marginBottom: espaciado.md,
+    },
+    textoError: {
+      ...tipografia.chico,
+      color: colores.error,
     },
     puntosMiembro: {
       ...tipografia.cuerpo,

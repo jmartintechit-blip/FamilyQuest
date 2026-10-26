@@ -109,6 +109,22 @@ const MIGRACIONES = [
       WHERE id IN (SELECT MIN(id) FROM usuarios WHERE familia_id IS NOT NULL GROUP BY familia_id)
     `);
   },
+
+  // 4: resumen de cada semana, guardado justo antes de reiniciar el ranking.
+  // `datos` es un JSON con el ranking, la tarea más repetida y el ganador.
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS resumenes_semanales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        familia_id INTEGER NOT NULL,
+        semana_inicio TEXT NOT NULL,
+        semana_fin TEXT NOT NULL,
+        datos TEXT NOT NULL,
+        FOREIGN KEY (familia_id) REFERENCES familias(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_resumenes_familia ON resumenes_semanales(familia_id, id);
+    `);
+  },
 ];
 
 function migrar(db) {

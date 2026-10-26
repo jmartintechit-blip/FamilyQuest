@@ -60,6 +60,10 @@ function obtenerRanking(req, res) {
   res.json(ranking);
 }
 
+function obtenerResumenSemanal(req, res) {
+  res.json(familiasService.obtenerResumenSemanal(req.params.id));
+}
+
 function obtenerFamilia(req, res) {
   try {
     const familia = familiasService.obtenerFamilia(req.params.id);
@@ -69,4 +73,4 @@ function obtenerFamilia(req, res) {
   }
 }
 
-module.exports = { crearFamilia, renombrarFamilia, regenerarCodigo, expulsarMiembro, unirseConCodigo, listarMiembros, salirDeFamilia, obtenerRanking, obtenerFamilia };
+module.exports = { crearFamilia, renombrarFamilia, regenerarCodigo, expulsarMiembro, unirseConCodigo, listarMiembros, salirDeFamilia, obtenerRanking, obtenerResumenSemanal, obtenerFamilia };

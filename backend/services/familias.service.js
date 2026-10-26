@@ -2,6 +2,7 @@ const { randomInt } = require('node:crypto');
 const db = require('../db/conexion');
 const { obtenerFamiliaDeUsuario } = require('../middleware/familia');
 const { crearErrorHttp } = require('./errores');
+const { guardarResumen, obtenerUltimoResumen } = require('./resumen.service');
 
 const SEMANA_EN_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -18,8 +19,12 @@ function revisarResetRanking(familiaId) {
   const haPasadoUnaSemana = Date.now() - ultimoReset.getTime() >= SEMANA_EN_MS;
 
   if (haPasadoUnaSemana) {
-    db.prepare('UPDATE usuarios SET puntos_totales = 0 WHERE familia_id = ?').run(familiaId);
-    db.prepare('UPDATE familias SET ranking_ultimo_reset = CURRENT_TIMESTAMP WHERE id = ?').run(familiaId);
+    // Resumen y reinicio van juntos: si falla uno no debe quedar hecho el otro.
+    db.transaction(() => {
+      guardarResumen(familiaId, familia.ranking_ultimo_reset);
+      db.prepare('UPDATE usuarios SET puntos_totales = 0 WHERE familia_id = ?').run(familiaId);
+      db.prepare('UPDATE familias SET ranking_ultimo_reset = CURRENT_TIMESTAMP WHERE id = ?').run(familiaId);
+    })();
   }
 }
 
@@ -145,6 +150,11 @@ function obtenerRanking(familiaId) {
   ).all(familiaId);
 }
 
+function obtenerResumenSemanal(familiaId) {
+  revisarResetRanking(familiaId);
+  return obtenerUltimoResumen(familiaId);
+}
+
 function obtenerFamilia(familiaId) {
   revisarResetRanking(familiaId);
   const familia = db.prepare('SELECT * FROM familias WHERE id = ?').get(familiaId);
@@ -168,5 +178,6 @@ module.exports = {
   unirseConCodigo,
   listarMiembros,
   obtenerRanking,
+  obtenerResumenSemanal,
   obtenerFamilia,
 };

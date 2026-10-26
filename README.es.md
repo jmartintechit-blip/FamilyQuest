@@ -37,7 +37,11 @@ Cada familia tiene un espacio privado. Creas una cuenta y entras con un código 
 - **Mascota virtual compartida.** Su salud sube con las tareas positivas y baja con las negativas. Hay 6 especies y 6 complementos en 3 categorías (sombreros, gafas, cuello), que se desbloquean con las monedas que gana la familia.
 - **Feed de actividad.** Una pestaña de notificaciones muestra quién ha completado qué. Se usan notificaciones locales (mira las limitaciones para las push).
 - **Chat familiar en tiempo real** mediante Socket.IO.
-- **Gestión de la familia.** Ver miembros y puntos, copiar o compartir el código de invitación, salir de la familia y cambiar tu contraseña.
+- **Administrador de la familia.** Quien crea la familia es su administrador: edita o elimina tareas, cambia el nombre de la familia, regenera el código de invitación, quita miembros y reinicia la contraseña de un miembro (una contraseña temporal de un solo uso, sin correo). El resto puede seguir añadiendo y completando tareas.
+- **Historial con deshacer.** Un registro de cada tarea completada. Quien la registró (o el administrador) puede deshacerla durante 24 horas y solo en la semana en curso; se revierten los puntos, la salud de la mascota y las monedas.
+- **Resumen semanal.** Antes de cada reinicio semanal el servidor guarda un resumen: la persona ganadora, los puntos de cada miembro y la tarea más repetida. Se ve en la pantalla Ranking.
+- **Tienda de premios.** El administrador define premios ("elegir la película", "un día sin tareas") y cualquier miembro los canjea con las monedas compartidas de la familia. Toda la familia recibe un aviso.
+- **Tus datos.** Ver miembros y puntos, copiar o compartir el código de invitación, salir de la familia, cambiar tu contraseña o eliminar tu cuenta (borra también tus mensajes, notificaciones y puntos; la familia desaparece con su último miembro).
 - **Apariencia.** Tema automático, claro u oscuro; letra normal, grande o muy grande.
 
 ## Arquitectura
@@ -52,6 +56,7 @@ flowchart LR
 
 El backend está organizado en capas y cada recurso (auth, tareas, familias, chat, mascota, notificaciones) sigue el mismo patrón:
 
+- `config.js` comprueba el entorno al arrancar (`JWT_SECRET`) y lee la lista de orígenes CORS.
 - `routes/` declara los endpoints y aplica los middlewares de autenticación y validación.
 - `controllers/` lee la petición y arma la respuesta.
 - `services/` contiene la lógica de negocio y el SQL. Cuando una acción toca varios dominios (completar una tarea cambia puntos, salud de la mascota y notificaciones), el servicio principal llama a los demás en vez de repetir lógica.
@@ -106,7 +111,9 @@ cd backend && npm ci && cp .env.example .env && node index.js   # API en :3000
 cd frontend && npm ci && npx expo start --web                   # segundo terminal
 ```
 
-La app encuentra la API por sí sola: usa la dirección del ordenador que ejecuta Expo (la que tu móvil ya alcanza) con el puerto 3000, o `localhost` en la build web. Para apuntar a otro sitio, define `EXPO_PUBLIC_API_URL`. Cambia `JWT_SECRET` en `backend/.env` por tu propia cadena larga y aleatoria.
+La app encuentra la API por sí sola: usa la dirección del ordenador que ejecuta Expo (la que tu móvil ya alcanza) con el puerto 3000, o `localhost` en la build web. Para apuntar a otro sitio, define `EXPO_PUBLIC_API_URL`. Cambia `JWT_SECRET` en `backend/.env` por tu propia cadena larga y aleatoria: el servidor se niega a arrancar si falta, tiene menos de 16 caracteres o sigue siendo el valor de ejemplo.
+
+Otras variables de entorno opcionales del backend: `PORT` (por defecto 3000), `CORS_ORIGIN` (lista de orígenes permitidos separados por comas; por defecto solo se acepta `localhost`, suficiente para el servidor web de desarrollo de Expo) y `RATE_LIMIT_MAX` (intentos de inicio de sesión, registro, código de invitación y contraseña por IP cada 15 minutos; por defecto 20).
 
 En el móvil, escanea con la app [Expo Go](https://expo.dev/go) el código QR que imprime Expo (misma red Wi-Fi que tu ordenador).
 
@@ -116,18 +123,24 @@ En el móvil, escanea con la app [Expo Go](https://expo.dev/go) el código QR qu
 cd backend && npm test
 ```
 
-17 tests pasan en este commit, con el ejecutor de tests integrado de Node. Cada archivo de tests arranca el servidor real en un directorio temporal (así nunca toca tu base de datos) y habla con él por HTTP y Socket.IO:
+42 tests pasan en este commit, con el ejecutor de tests integrado de Node. La mayoría de los archivos arrancan el servidor real en un directorio temporal (así nunca toca tu base de datos) y hablan con él por HTTP y Socket.IO:
 
 - [`auth.test.js`](backend/test/auth.test.js) (7): registro, correo duplicado, errores de validación, inicio de sesión, contraseña incorrecta, rutas protegidas con token ausente o falso, y el cambio de contraseña.
-- [`familias.test.js`](backend/test/familias.test.js) (7): el catálogo de 53 tareas, unirse con código de invitación, puntos y ranking, validación de tareas, chat sin suplantación, y un test de aislamiento que hace que un usuario de otra familia llame a 17 endpoints de esta familia y espera 403 en todos.
+- [`familias.test.js`](backend/test/familias.test.js) (8): el catálogo de 53 tareas, unirse con código de invitación, puntos y ranking, validación de tareas, chat sin suplantación, paginación del chat, y un test de aislamiento que hace que un usuario de otra familia llame a 17 endpoints de esta familia y espera 403 en todos.
 - [`socket.test.js`](backend/test/socket.test.js) (3): sin conexión sin un token válido, un miembro recibe los mensajes de su familia, y un miembro de otra familia no puede entrar en la sala ni recibirlos.
+- [`admin.test.js`](backend/test/admin.test.js) (9): acciones solo para el administrador, tareas archivadas que conservan el historial, reglas de deshacer, reinicio de contraseña, quitar miembros, traspaso de administración cuando se va, y borrado de cuenta.
+- [`premios.test.js`](backend/test/premios.test.js) (5): la tienda de premios, incluido pagar con monedas, los avisos y la edición solo para el administrador.
+- [`resumen.test.js`](backend/test/resumen.test.js) (4): el resumen semanal y el reinicio semanal, y la limpieza de una familia que se queda vacía.
+- [`seguridad.test.js`](backend/test/seguridad.test.js) (3): la comprobación de `JWT_SECRET`, el límite de peticiones (429) y las cabeceras de seguridad y la lista de orígenes CORS.
+- [`migraciones.test.js`](backend/test/migraciones.test.js) (3): una base nueva, y la actualización de una base creada antes de existir las migraciones sin perder datos.
 
 El frontend no tiene tests.
 
 Lo que hace la [CI](.github/workflows/ci.yml) en cada push:
 
+- Lint: ESLint sobre todo el repositorio (los errores rompen la build; `react-hooks/exhaustive-deps` es un aviso).
 - Backend: `npm ci`, una comprobación de sintaxis de todos los archivos `.js` y `npm test`.
-- Frontend: `npm ci` y una exportación de producción del bundle web con Expo.
+- Frontend: `npm ci`, `expo-doctor` y una exportación de producción del bundle web con Expo.
 - `npm audit --omit=dev` en ambos, solo como aviso, para que una advisory nueva no bloquee los merges.
 
 Auditoría de dependencias a 2026-10-20: el backend no reporta ninguna advisory. El frontend reporta 26 (8 moderadas, 18 altas, ninguna crítica), todas en las herramientas de compilación de Expo y React Native (Metro, la CLI de Expo y similares). No hay arreglo compatible: el que sugiere `npm audit` bajaría Expo al SDK 44.
@@ -137,30 +150,37 @@ Auditoría de dependencias a 2026-10-20: el backend no reporta ninguna advisory.
 - Cada endpoint REST que lee o cambia datos de una familia comprueba en el servidor que el usuario autenticado pertenece a esa familia.
 - Las contraseñas se guardan con hash bcrypt y la API nunca las devuelve.
 - El cuerpo de cada petición se valida con Zod antes de llegar a la lógica de negocio.
+- El registro, el inicio de sesión, unirse con código de invitación, cambiar la contraseña y eliminar la cuenta tienen límite de peticiones por IP.
+- Cabeceras de seguridad con `helmet`, una lista de orígenes CORS, y un servidor que se niega a arrancar sin un `JWT_SECRET` real.
+- Los códigos de invitación se generan con `crypto.randomInt` y el administrador puede regenerarlos.
+- En el móvil el token de sesión se guarda en `expo-secure-store` (Keychain / Keystore).
 - Para reportar una vulnerabilidad, mira [SECURITY.md](SECURITY.md).
 
 Los huecos están listados más abajo, en [Limitaciones conocidas](#limitaciones-conocidas). Léelos antes de usar esto con datos reales.
 
 ## Limitaciones conocidas
 
-- **Sin límite de peticiones, sin cabeceras de seguridad** (como `helmet`) y CORS abierto a cualquier origen. Las peticiones se autentican con un token en cabecera, no con una cookie, pero endurécelo antes de desplegar.
-- **`JWT_SECRET` no se comprueba al arrancar.** Sin él el servidor arranca y el inicio de sesión falla después con un error 500.
+- **Reiniciar una contraseña no revoca los tokens antiguos.** Los tokens ya emitidos valen hasta que caducan (7 días). No hay refresco ni lista de revocación.
+- **El límite de peticiones cuenta por IP.** Detrás de un proxy inverso hay que configurar `trust proxy` en Express, o todos los clientes comparten un solo contador.
 - **Sin demo alojada ni configuración de despliegue.** SQLite es un archivo local, así que la app está pensada para un solo equipo.
 - **Las notificaciones push entre miembros de la familia todavía no funcionan.** Requieren vincular el proyecto a EAS. Solo funcionan las notificaciones locales.
-- **El token se guarda con `AsyncStorage`**, que no es un almacenamiento cifrado.
+- **En la build web el token vive en `localStorage`.** `expo-secure-store` se usa solo en iOS y Android, y todavía no se ha probado en un dispositivo real.
+- **Deshacer tiene límites:** 24 horas y la semana en curso, porque después se reinicia el ranking.
+- **La accesibilidad** ha mejorado (etiquetas, roles, contraste de las paletas según WCAG AA, zonas táctiles de 44 px) pero no se ha probado con un lector de pantalla.
 - **La interfaz está solo en español**, y los identificadores del código también.
 - **Advisories de dependencias del frontend** en las herramientas de compilación (mira [Tests y calidad](#tests-y-calidad)).
-- **El frontend no tiene tests**, y los tests no cubren los complementos de la mascota, las notificaciones ni el reinicio semanal.
+- **El frontend no tiene tests**, y los tests del backend no cubren los complementos de la mascota ni las notificaciones push.
 
 ## Hoja de ruta
 
 Ideas, no promesas:
 
-- [ ] Límite de peticiones, cabeceras de seguridad y una política CORS más estricta
-- [ ] Fallar al arrancar si falta `JWT_SECRET`
-- [ ] Tests para la mascota, las notificaciones y el reinicio semanal
-- [ ] Rol de administrador familiar (permisos sobre tareas y miembros)
-- [ ] Historial de tareas completadas
+- [x] Límite de peticiones, cabeceras de seguridad y una política CORS más estricta (0.2.0)
+- [x] Fallar al arrancar si falta `JWT_SECRET` (0.2.0)
+- [x] Rol de administrador familiar (permisos sobre tareas y miembros) (0.2.0)
+- [x] Historial de tareas completadas, con deshacer (0.2.0)
+- [x] Resumen semanal y tienda de premios (0.2.0)
+- [ ] Tests del frontend, y tests del backend para la mascota y las notificaciones
 - [ ] Notificaciones push reales entre miembros (requiere EAS)
 - [ ] Build instalable con EAS (`.apk` y `.ipa`)
 - [ ] Demo alojada

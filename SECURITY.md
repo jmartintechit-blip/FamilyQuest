@@ -7,7 +7,8 @@ FamilyQuest is a portfolio project that you run on your own machine. There is no
 | Version        | Supported |
 | -------------- | --------- |
 | `main` branch  | Yes       |
-| 0.1.x          | Yes       |
+| 0.2.x          | Yes       |
+| 0.1.x          | No        |
 | Anything older | No        |
 
 ## Reporting a vulnerability
@@ -29,7 +30,7 @@ Out of scope: denial of service by volume, social engineering, and anything that
 
 These are already known and listed in the README under [Known limitations](README.md#known-limitations). Please check it before reporting:
 
-- There is no rate limiting or security-header middleware, and CORS is open.
-- The server starts without `JWT_SECRET` and login then fails.
+- Tokens issued before a password reset stay valid until they expire (7 days).
+- The rate limit counts per IP and needs `trust proxy` behind a reverse proxy.
 - The advisories that `npm audit` reports in the frontend's Expo and React Native build tooling.
 - Using the placeholder `JWT_SECRET` from `backend/.env.example`: change it.

@@ -37,7 +37,11 @@ Each family gets a private space. You create an account and join with an invite 
 - **Shared virtual pet.** Its health goes up with positive tasks and down with negative ones. There are 6 species and 6 accessories in 3 categories (hats, glasses, neckwear), unlocked with coins the family earns.
 - **Activity feed.** A notifications tab shows who completed what. Local notifications are used (see limitations for push).
 - **Family chat in real time** over Socket.IO.
-- **Family management.** See members and points, copy or share the invite code, leave the family, change your password.
+- **Family admin.** The person who creates the family is its admin: they edit or remove tasks, rename the family, regenerate the invite code, remove members and reset a member's password (a one-time temporary password, no e-mail needed). Everyone else can still add tasks and complete them.
+- **History with undo.** A log of every completed task. Whoever registered one (or the admin) can undo it for 24 hours, in the current week only, which reverses the points, the pet's health and the coins.
+- **Weekly recap.** Before each weekly reset the server saves a summary: the winner, everyone's points, the most repeated task. It is shown on the Ranking screen.
+- **Rewards store.** The admin defines prizes ("choose the movie", "a day without chores") and any member redeems them with the family's shared coins. The family gets a notification.
+- **Your data.** See members and points, copy or share the invite code, leave the family, change your password or delete your account (it also deletes your messages, notifications and points; the family disappears with its last member).
 - **Appearance.** Automatic, light or dark theme; normal, large or very large font.
 
 ## Architecture
@@ -52,6 +56,7 @@ flowchart LR
 
 The backend is organised in layers and every resource (auth, tareas, familias, chat, mascota, notificaciones) follows the same pattern:
 
+- `config.js` checks the environment at start-up (`JWT_SECRET`) and reads the CORS allow-list.
 - `routes/` declares the endpoints and applies the auth and validation middleware.
 - `controllers/` reads the request and shapes the response.
 - `services/` holds the business logic and the SQL. When one action touches several domains (completing a task changes points, pet health and notifications), the main service calls the others instead of repeating logic.
@@ -61,7 +66,8 @@ The backend is organised in layers and every resource (auth, tareas, familias, c
 backend/
 ├── index.js        Express and Socket.IO bootstrap, mounts the routers
 ├── socket.js       Connection handling and one room per family
-├── db/             SQLite connection, schema and migrations
+├── config.js       Start-up checks and CORS allow-list
+├── db/             SQLite connection and versioned migrations (schema_version)
 ├── middleware/     JWT check, family membership, Zod adapter
 ├── routes/  controllers/  services/  schemas/
 frontend/
@@ -106,7 +112,9 @@ cd backend && npm ci && cp .env.example .env && node index.js   # API on :3000
 cd frontend && npm ci && npx expo start --web                   # second terminal
 ```
 
-The app finds the API on its own: it uses the address of the computer running Expo (the one your phone already reaches) with port 3000, or `localhost` on the web build. To point it somewhere else, set `EXPO_PUBLIC_API_URL`. Change `JWT_SECRET` in `backend/.env` to your own long random string.
+The app finds the API on its own: it uses the address of the computer running Expo (the one your phone already reaches) with port 3000, or `localhost` on the web build. To point it somewhere else, set `EXPO_PUBLIC_API_URL`. Change `JWT_SECRET` in `backend/.env` to your own long random string: the server refuses to start if it is missing, shorter than 16 characters or still the example value.
+
+Other optional environment variables for the backend: `PORT` (default 3000), `CORS_ORIGIN` (comma-separated list of allowed origins; by default only `localhost` is accepted, which is enough for the Expo web dev server) and `RATE_LIMIT_MAX` (login, sign-up, invite-code and password attempts per IP every 15 minutes; default 20).
 
 On a phone, scan the QR code that Expo prints with the [Expo Go](https://expo.dev/go) app (same Wi-Fi as your computer).
 
@@ -116,18 +124,24 @@ On a phone, scan the QR code that Expo prints with the [Expo Go](https://expo.de
 cd backend && npm test
 ```
 
-17 tests pass on this commit, using Node's built-in test runner. Each test file starts the real server in a temporary directory (so it never touches your database) and talks to it over HTTP and Socket.IO:
+42 tests pass on this commit, using Node's built-in test runner. Most test files start the real server in a temporary directory (so it never touches your database) and talk to it over HTTP and Socket.IO:
 
 - [`auth.test.js`](backend/test/auth.test.js) (7): sign-up, duplicate e-mail, validation errors, login, wrong password, protected routes with a missing or fake token, and the password change.
-- [`familias.test.js`](backend/test/familias.test.js) (7): the 53-task catalogue, joining with an invite code, points and the ranking, task validation, chat without impersonation, and an isolation test that makes a user from another family call 17 endpoints of this family and expects 403 on all of them.
+- [`familias.test.js`](backend/test/familias.test.js) (8): the 53-task catalogue, joining with an invite code, points and the ranking, task validation, chat without impersonation, chat pagination, and an isolation test that makes a user from another family call 17 endpoints of this family and expects 403 on all of them.
 - [`socket.test.js`](backend/test/socket.test.js) (3): no connection without a valid token, a member receives their family's messages, and a member of another family can neither join the room nor receive them.
+- [`admin.test.js`](backend/test/admin.test.js) (9): admin-only actions, task archiving that keeps the history, undo rules, password reset, removing members, admin hand-over when the admin leaves, and account deletion.
+- [`premios.test.js`](backend/test/premios.test.js) (5): the rewards store, including paying with coins, notifications and admin-only editing.
+- [`resumen.test.js`](backend/test/resumen.test.js) (4): the weekly recap and the weekly reset, and the clean-up of an emptied family.
+- [`seguridad.test.js`](backend/test/seguridad.test.js) (3): the `JWT_SECRET` check, the rate limit (429) and the security headers and CORS allow-list.
+- [`migraciones.test.js`](backend/test/migraciones.test.js) (3): a new database, and upgrading a database created before migrations existed without losing data.
 
 The frontend has no tests.
 
 What [CI](.github/workflows/ci.yml) does on every push:
 
+- Lint: ESLint over the whole repository (errors fail the build; `react-hooks/exhaustive-deps` is a warning).
 - Backend: `npm ci`, a syntax check of every `.js` file and `npm test`.
-- Frontend: `npm ci` and a production export of the web bundle with Expo.
+- Frontend: `npm ci`, `expo-doctor` and a production export of the web bundle with Expo.
 - `npm audit --omit=dev` for both, as a warning only, so a new advisory does not block merges.
 
 Dependency audit on 2026-10-20: the backend reports 0 advisories. The frontend reports 26 (8 moderate, 18 high, none critical), all in the Expo and React Native build tooling (Metro, the Expo CLI and similar). There is no compatible fix: the one `npm audit` suggests would downgrade Expo to SDK 44.
@@ -137,30 +151,37 @@ Dependency audit on 2026-10-20: the backend reports 0 advisories. The frontend r
 - Every REST endpoint that reads or changes family data checks on the server that the authenticated user belongs to that family.
 - Passwords are hashed with bcrypt and never returned by the API.
 - Every request body is validated with Zod before it reaches the business logic.
+- Sign-up, login, joining with an invite code, changing a password and deleting an account are rate limited per IP.
+- `helmet` security headers, a CORS allow-list, and a server that refuses to start without a real `JWT_SECRET`.
+- Invite codes are generated with `crypto.randomInt` and the admin can regenerate them.
+- On a phone the session token is kept in `expo-secure-store` (Keychain / Keystore).
 - To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 The gaps are listed below, in [Known limitations](#known-limitations). Read them before using this with real data.
 
 ## Known limitations
 
-- **No rate limiting, no security headers** (such as `helmet`), and CORS is open to every origin. Requests are authenticated with a bearer token, not a cookie, but tighten this before deploying.
-- **`JWT_SECRET` is not checked at start-up.** Without it the server starts, and login then fails with a 500 error.
+- **A reset password does not revoke old tokens.** Tokens already issued stay valid until they expire (7 days). There is no refresh or revocation list.
+- **The rate limit counts per IP.** Behind a reverse proxy you must set Express's `trust proxy`, or every client shares one counter.
 - **No hosted demo and no deployment setup.** SQLite is one local file, so the app is meant for one machine.
 - **Push notifications between family members do not work yet.** They need the project to be linked to EAS. Only local notifications work.
-- **The token is stored with `AsyncStorage`**, which is not encrypted storage.
+- **On the web build the token lives in `localStorage`.** `expo-secure-store` is used on iOS and Android only, and has not been tested on a real device yet.
+- **Undoing is limited** to 24 hours and to the current week, because the ranking is reset after that.
+- **Accessibility** was improved (labels, roles, contrast of the palettes against WCAG AA, 44 px touch targets) but has not been tested with a screen reader.
 - **The interface is in Spanish only**, and the code identifiers are in Spanish too.
 - **Frontend dependency advisories** in the build tooling (see [Tests and quality](#tests-and-quality)).
-- **The frontend has no tests**, and the tests do not cover pet cosmetics, notifications or the weekly reset.
+- **The frontend has no tests**, and the backend tests do not cover pet cosmetics or push notifications.
 
 ## Roadmap
 
 Ideas, not promises:
 
-- [ ] Rate limiting, security headers and a stricter CORS policy
-- [ ] Fail fast when `JWT_SECRET` is missing
-- [ ] Tests for the pet, notifications and the weekly reset
-- [ ] Family admin role (permissions over tasks and members)
-- [ ] History of completed tasks
+- [x] Rate limiting, security headers and a stricter CORS policy (0.2.0)
+- [x] Fail fast when `JWT_SECRET` is missing (0.2.0)
+- [x] Family admin role (permissions over tasks and members) (0.2.0)
+- [x] History of completed tasks, with undo (0.2.0)
+- [x] Weekly recap and a rewards store (0.2.0)
+- [ ] Frontend tests, and backend tests for the pet and notifications
 - [ ] Real push notifications between members (needs EAS)
 - [ ] Installable build with EAS (`.apk` and `.ipa`)
 - [ ] Hosted demo

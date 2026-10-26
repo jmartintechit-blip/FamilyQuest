@@ -8,10 +8,10 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
-    # Expo pins its own versions; major jumps are done by hand with `expo install`.
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+    # Expo pins the versions of react, react-native and every expo-* package, so routine
+    # bumps are done by hand with `npx expo install --fix`. Limit 0 turns off version-update
+    # PRs but keeps Dependabot security updates.
+    open-pull-requests-limit: 0
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -63,6 +63,9 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
+      - name: Expo doctor
+        working-directory: frontend
+        run: npx expo-doctor
       - name: Build web bundle
         working-directory: frontend
         run: npx expo export --platform web --output-dir "$RUNNER_TEMP/web-dist"

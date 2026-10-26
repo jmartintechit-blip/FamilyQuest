@@ -2,16 +2,25 @@
   "expo": {
     "name": "FamilyQuest",
     "slug": "familyquest",
-    "version": "1.0.0",
+    "scheme": "familyquest",
+    "version": "0.2.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "backgroundColor": "#F6FAF7"
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "io.github.jmartintechit.familyquest",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "io.github.jmartintechit.familyquest"
     },
     "plugins": [
       "expo-font",
-      "expo-splash-screen"
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F6FAF7"
+        }
+      ]
     ]
   }
 }

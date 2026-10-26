@@ -1,12 +1,32 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 // Context de React: una forma de compartir datos (aquí, la sesión del
 // usuario) entre pantallas sin tener que pasarlos a mano de componente en
 // componente. Cualquier pantalla llama a useAuth() y tiene acceso directo.
 const AuthContext = createContext(null);
 
-const CLAVE_STORAGE = '@app_familia_sesion';
+// SecureStore solo admite letras, números, "." "-" y "_" en la clave, así que la clave
+// nueva no lleva la "@" de la antigua (que sigue usándose en AsyncStorage y en web).
+const CLAVE_ANTIGUA = '@app_familia_sesion';
+const CLAVE_SEGURA = 'app_familia_sesion';
+
+// El token da acceso a la cuenta: en móvil se guarda cifrado (Keychain / Keystore).
+// La web no tiene almacén seguro, así que ahí se queda en AsyncStorage (localStorage).
+const almacen =
+  Platform.OS === 'web'
+    ? {
+        leer: () => AsyncStorage.getItem(CLAVE_ANTIGUA),
+        guardar: (valor) => AsyncStorage.setItem(CLAVE_ANTIGUA, valor),
+        borrar: () => AsyncStorage.removeItem(CLAVE_ANTIGUA),
+      }
+    : {
+        leer: () => SecureStore.getItemAsync(CLAVE_SEGURA),
+        guardar: (valor) => SecureStore.setItemAsync(CLAVE_SEGURA, valor),
+        borrar: () => SecureStore.deleteItemAsync(CLAVE_SEGURA),
+      };
 
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
@@ -17,7 +37,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function restaurarSesion() {
       try {
-        const guardado = await AsyncStorage.getItem(CLAVE_STORAGE);
+        let guardado = await almacen.leer();
+        if (!guardado && Platform.OS !== 'web') {
+          // Sesión de una versión anterior: se pasa al almacén cifrado y se borra la copia en claro.
+          guardado = await AsyncStorage.getItem(CLAVE_ANTIGUA);
+          if (guardado) await almacen.guardar(guardado);
+          await AsyncStorage.removeItem(CLAVE_ANTIGUA);
+        }
         if (guardado) {
           const { usuario: usuarioGuardado, token: tokenGuardado } = JSON.parse(guardado);
           setUsuario(usuarioGuardado);
@@ -35,7 +61,7 @@ export function AuthProvider({ children }) {
   async function guardarSesion(usuarioNuevo, tokenNuevo) {
     setUsuario(usuarioNuevo);
     setToken(tokenNuevo);
-    await AsyncStorage.setItem(CLAVE_STORAGE, JSON.stringify({ usuario: usuarioNuevo, token: tokenNuevo }));
+    await almacen.guardar(JSON.stringify({ usuario: usuarioNuevo, token: tokenNuevo }));
   }
 
   // Para cuando cambia algo del usuario ya logueado (p. ej. se une a una
@@ -43,7 +69,7 @@ export function AuthProvider({ children }) {
   async function actualizarUsuario(cambios) {
     setUsuario((actual) => {
       const nuevo = { ...actual, ...cambios };
-      AsyncStorage.setItem(CLAVE_STORAGE, JSON.stringify({ usuario: nuevo, token }));
+      almacen.guardar(JSON.stringify({ usuario: nuevo, token }));
       return nuevo;
     });
   }
@@ -51,7 +77,7 @@ export function AuthProvider({ children }) {
   async function cerrarSesion() {
     setUsuario(null);
     setToken(null);
-    await AsyncStorage.removeItem(CLAVE_STORAGE);
+    await almacen.borrar();
   }
 
   return (
